@@ -1,0 +1,11 @@
+Revision history for Perl extension VN::Client.
+
+0.02  Thu Jun 28 12:44:01 2007
+	- changed XS language from C to C++
+	- removed global static variables
+	- added class VNClient, that contains all methods
+
+0.01  Mon Sep  8 18:01:26 2003
+	- original version; created by h2xs 1.22 with options
+		-n VN::Client
+

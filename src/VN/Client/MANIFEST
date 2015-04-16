@@ -1,0 +1,12 @@
+Changes			History of this package
+Client.pm               Bootstrap & documentation
+Client.xs		XS glue
+Makefile.PL		Will create 'Makefile' to build this extention
+MANIFEST		This file
+ppport.h
+perlobject.map		C++ Typemap
+README			The Instructions
+t/1.t			Test
+fallback/const-c.inc
+fallback/const-xs.inc
+typemap			
