@@ -3,9 +3,10 @@ package VNDRV::VNPeer;
 use Moose;
 use threads;
 use threads::shared;
-use Time::HiRes qw ( usleep gettimeofday tv_interval );
+use Storable qw( dclone );
+use Hash::Merge;
 
-has 'changes' => (is => 'ro', isa => 'Thread::Queue');
+has 'changes_queue' => (is => 'ro', isa => 'Thread::Queue');
 has 'data' => (is => 'ro', isa => 'HashRef');
 has 'is_application_running' => (is => 'ro', isa => 'ScalarRef');
 has 'log' => (is => 'ro', isa => 'Log::Handler');
@@ -31,6 +32,7 @@ sub run {
 	$self->log->error("NUD0005F Critical error in News peer: $@")
 		if($@);
 	$self->log->debug("NUD0006I Exit from News peer thread");
+	$self->_send_termination_signal;
 }
 
 sub _set_stop_thread_signal_handler {
@@ -41,6 +43,11 @@ sub _set_stop_thread_signal_handler {
 sub _is_terminated {
 	my $self = shift;
 	return (${$self->is_application_running} == 1) ? 0 : 1;
+}
+
+sub _send_termination_signal {
+	my $self = shift;
+	${$self->is_application_running} = 0;
 }
 
 sub _sync_VN {
@@ -65,6 +72,9 @@ sub _sync_VN {
 	};
 	$res = $@
 		if($@);
+
+	$self->log->error("NUD0009E News sync error #$res")
+		if $res;
 
 	return $res;
 }

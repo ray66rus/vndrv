@@ -20,7 +20,7 @@ use lib "$Bin/../lib";
 use VNDRV::VNPeer;
 
 # log
-our $LOG;
+our $LOG = Log::Handler->new(screen => { log_to => 'STDERR', message_layout => '%m' });
 our $LOG_LEVEL;
 
 # CFG
@@ -34,6 +34,7 @@ my $VN_CHANGES;
 ################
 # main
 #
+my $exit_code = 0;
 eval {
 	init_config();
 	init_log();
@@ -42,10 +43,11 @@ eval {
 	while($IS_RUNNING) { sleep(1) }
 };
 if($@) {
-	print "Fatal error: $@\n";
-	exit 1;
+	$exit_code = 1;
+	$LOG->crit("NUD0008F Fatal error: $@");
 }
-exit 0;
+cleanup();
+exit $exit_code;
 ################
 
 sub init_config {
@@ -58,7 +60,8 @@ sub init_config {
 sub init_log {
 	mkdir "$Bin/../log"
 		unless -d "$Bin/../log";
-	$LOG = Log::Handler->new(file => {
+	$LOG->reload(config => {
+		file => {
 			filename => "$Bin/../log/vndrv.log",
 			utf8 => 1,
 			minlevel => 'critical',
@@ -70,7 +73,7 @@ sub init_log {
 			message_layout => '%T %P %m',
 			newline	=> 1,
 		}
-	);
+	});
 	$LOG->info(sprintf("NUD0000I ===== VN Driver version %s started =====", VERSION));
 }
 
@@ -85,7 +88,7 @@ sub init_ipc {
 
 sub start_vn_connector {
 	my $vn_client = new VNDRV::VNPeer({
-		changes => $VN_CHANGES,
+		changes_queue => $VN_CHANGES,
 		data => \%VN_DATA,
 		is_application_running => \$IS_RUNNING,
 		log => $LOG,
@@ -93,7 +96,6 @@ sub start_vn_connector {
 	});
 	return
 		if defined(threads->create({context => 'void'}, \&VNDRV::VNPeer::run, $vn_client));
-	cleanup();
 	$LOG->crit("NUD0001F Can't start process for Broadcast.me News connector");
 	die "Can't start News connector";
 }
@@ -123,5 +125,3 @@ sub _stop_all_threads {
 		usleep(10000);		
 	}
 }
-
-

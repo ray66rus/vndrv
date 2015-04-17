@@ -922,3 +922,47 @@ C<EXE_FILES: >
 
 =back
 
+=head2 Fri Apr 17 17:53:55 2015: C<Module> L<Clone|Clone>
+
+=over 4
+
+=item *
+
+C<installed into: /home/ray/development/vndrv/local/lib/perl5>
+
+=item *
+
+C<LINKTYPE: dynamic>
+
+=item *
+
+C<VERSION: 0.38>
+
+=item *
+
+C<EXE_FILES: >
+
+=back
+
+=head2 Fri Apr 17 17:53:55 2015: C<Module> L<Hash::Merge|Hash::Merge>
+
+=over 4
+
+=item *
+
+C<installed into: /home/ray/development/vndrv/local/lib/perl5>
+
+=item *
+
+C<LINKTYPE: dynamic>
+
+=item *
+
+C<VERSION: 0.200>
+
+=item *
+
+C<EXE_FILES: >
+
+=back
+

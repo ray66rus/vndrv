@@ -92,7 +92,6 @@ sub SetHandlers
 sub DESTROY
 {
 	my $self = shift();
-#	VN::Client::CloseConnection();
 	if( defined($self->{'_vn_client'}) ) {
 		$self->{'_vn_client'}->CloseConnection();
 	}
