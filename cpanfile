@@ -3,3 +3,4 @@ requires 'Modern::Perl';
 requires 'Moose';
 requires 'Log::Handler';
 requires 'Config::JSON';
+requires 'Hash::Merge';

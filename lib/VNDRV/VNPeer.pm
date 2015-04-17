@@ -12,8 +12,11 @@ has 'is_application_running' => (is => 'ro', isa => 'ScalarRef');
 has 'log' => (is => 'ro', isa => 'Log::Handler');
 has 'config' => (is => 'ro', isa => 'Config::JSON');
 
-has 'rd' => (is => 'ro', isa => 'HashRef', default => sub { {} });
-has 'drv' => (is => 'ro', isa => 'VN::Driver', default => sub { require VN::Driver; return new VN::Driver });
+has 'rd' => (is => 'ro', isa => 'HashRef', default => sub { { issues => {} } });
+has 'drv' => (is => 'ro', isa => 'VN::Driver', default => sub { require VN::Driver; new VN::Driver });
+has 'merger' => (is => 'ro', isa => 'Hash::Merge', default => sub { Hash::Merge->new });
+has 'changes' => (is => 'rw', isa => 'HashRef', default => sub { {} });
+
 
 sub run {
 	my $self = shift;
@@ -25,7 +28,9 @@ sub run {
 	my $sync_interval = $self->config->get('news/sync_interval') // 4;
 	eval {	
 		while(!$self->_is_terminated) {
+			$self->_clear_changes;
 			$self->_sync_VN;
+			$self->_add_changes_to_queue;
 			sleep $sync_interval;
 		}
 	};
@@ -100,31 +105,82 @@ sub _init_driver {
 	return $drv;
 }
 
+sub _clear_changes {
+	my $self = shift;
+	$self->changes({});
+}
+
 sub _add_changes_to_queue {
 	my $self = shift;
-	my $changes = shift;
-	$self->changes->enqueue($changes);
+	$self->changes_queue->enqueue($self->_get_changes_clone);
 }
 
 sub on_update_rundown {
 	my ($self, $path, $data) = @_;
-	print "update rundown $data\n";
+
+	my $current_issues = $self->_issues;
+	my @updated_issues_ids = split(/,/, $data->{issues});
+	for my $i_id (keys %$current_issues) {
+		$self->_delete_issue($i_id)
+			unless grep { $_ eq $i_id } @updated_issues_ids;
+	}
+	for my $i_id (@updated_issues_ids) {
+		$self->_add_empty_issue($i_id)
+			unless defined($current_issues->{$i_id})
+	}
+}
+
+sub _issues {
+	my $self = shift;
+	return $self->rd->{issues};
+}
+
+sub _delete_issue {
+	my $self = shift;
+	my $id = shift;
+
+	my $issues = $self->_issues;
+	delete $issues->{$id};
+	$self->_merge_change({rd => {issues => {$id => ''}}});
+}
+
+sub _merge_change {
+	my $self = shift;
+	my $change = shift;
+	$self->changes($self->merger->merge(
+			$self->changes, $change
+		)
+	);
+}
+
+sub _add_empty_issue {
+	my $self = shift;
+	my $id = shift;
+
+	my $issues = $self->_issues;
+	$issues->{$id} = {};
+	$self->_merge_change({rd => {issues => {$id => {}}}});
 }
 
 sub on_update_issue {
 	my ($self, $path, $data) = @_;
-	print "update issue $path $data\n";
+#	print "update issue $path $data\n";
 }
 
 sub on_update_story {
 	my ($self, $path, $data) = @_;
-	print "update story $path $data\n";
+#	print "update story $path $data\n";
 }
 
 sub on_update_block {
 	my ($self, $path, $data) = @_;
-	print "update block $path $data\n";
+#	print "update block $path $data\n";
 }
 
-1;
+sub _get_changes_clone {
+	my $self = shift;
+	return dclone($self->changes);
+}
 
+
+1;
