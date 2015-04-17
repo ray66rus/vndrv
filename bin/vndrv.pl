@@ -10,7 +10,6 @@ use threads::shared;
 
 use Encode qw( encode decode );
 use Socket;
-use Params::Validate::XS;
 use Log::Handler;
 use Log::Handler::Output::File;
 use FindBin qw ( $Bin );
@@ -35,7 +34,6 @@ my $VN_CHANGES;
 ################
 # main
 #
-
 eval {
 	init_config();
 	init_log();
@@ -48,7 +46,6 @@ if($@) {
 	exit 1;
 }
 exit 0;
-
 ################
 
 sub init_config {
@@ -69,7 +66,8 @@ sub init_log {
 			mode	=> 'append',
 			fileopen => 0,
 			reopen	=> 0,
-			timeformat => '%Y:%m:%d %H:%M:%S',
+			timeformat => '%d.%m.%Y %H:%M:%S',
+			message_layout => '%T %P %m',
 			newline	=> 1,
 		}
 	);
@@ -86,17 +84,17 @@ sub init_ipc {
 }
 
 sub start_vn_connector {
-	my $ncs_client = new VNDRV::VNPeer ({
-		host	=> $CFG->get('news/host') || 'localhost',
-		port	=> $CFG->get('news/port') || '9898',
+	my $vn_client = new VNDRV::VNPeer({
 		changes => $VN_CHANGES,
 		data => \%VN_DATA,
 		is_application_running => \$IS_RUNNING,
+		log => $LOG,
+		config => $CFG,
 	});
 	return
 		if defined(threads->create({context => 'void'}, \&VNDRV::VNPeer::run, $vn_client));
 	cleanup();
-	$LOG->error("NUD0001F Can't start process for Broadcast.me News connector");
+	$LOG->crit("NUD0001F Can't start process for Broadcast.me News connector");
 	die "Can't start News connector";
 }
 
