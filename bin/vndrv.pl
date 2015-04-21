@@ -29,7 +29,7 @@ my $CFG;
 #IPC
 my $IS_RUNNING :shared;
 my %VN_DATA :shared;
-my $VN_CHANGES;
+my @VN_CHANGES = ();
 
 ################
 # main
@@ -80,7 +80,7 @@ sub init_log {
 sub init_ipc {
 	$IS_RUNNING = 1;
 	%VN_DATA = ();
-	$VN_CHANGES = Thread::Queue->new;
+	@VN_CHANGES = ( Thread::Queue->new );
 	$SIG{$_} = 'IGNORE'
 		for(keys %SIG);
 	$SIG{INT} = sub { cleanup(); exit(0) }
@@ -88,7 +88,7 @@ sub init_ipc {
 
 sub start_vn_connector {
 	my $vn_client = new VNDRV::VNPeer({
-		changes_queue => $VN_CHANGES,
+		changes_queues => \@VN_CHANGES,
 		data => \%VN_DATA,
 		is_application_running => \$IS_RUNNING,
 		log => $LOG,

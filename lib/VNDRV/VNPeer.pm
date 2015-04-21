@@ -6,7 +6,7 @@ use threads::shared;
 use Storable qw( dclone );
 use Hash::Merge;
 
-has 'changes_queue' => (is => 'ro', isa => 'Thread::Queue');
+has 'changes_queues' => (is => 'ro', isa => 'ArrayRef');
 has 'data' => (is => 'ro', isa => 'HashRef');
 has 'is_application_running' => (is => 'ro', isa => 'ScalarRef');
 has 'log' => (is => 'ro', isa => 'Log::Handler');
@@ -30,7 +30,7 @@ sub run {
 		while(!$self->_is_terminated) {
 			$self->_clear_changes;
 			$self->_sync_VN;
-			$self->_add_changes_to_queue;
+			$self->_add_changes_to_queues;
 			sleep $sync_interval;
 		}
 	};
@@ -110,29 +110,50 @@ sub _clear_changes {
 	$self->changes({});
 }
 
-sub _add_changes_to_queue {
+sub _add_changes_to_queues {
 	my $self = shift;
-	$self->changes_queue->enqueue($self->_get_changes_clone);
+
+	return
+		unless %{$self->changes};
+	for my $queue (@{$self->changes_queues}) {
+		$queue->enqueue($self->_get_changes_clone);
+	}
 }
 
 sub on_update_rundown {
 	my ($self, $path, $data) = @_;
 
-	my $current_issues = $self->_issues;
-	my @updated_issues_ids = split(/,/, $data->{issues});
-	for my $i_id (keys %$current_issues) {
-		$self->_delete_issue($i_id)
-			unless grep { $_ eq $i_id } @updated_issues_ids;
-	}
-	for my $i_id (@updated_issues_ids) {
-		$self->_add_empty_issue($i_id)
-			unless defined($current_issues->{$i_id})
-	}
+	$self->_update_list({
+			current_list => [ keys %{$self->_issues} ],
+			updated_list => [ split(/,/, $data->{issues}) ],
+			add_func => \&_add_empty_issue,
+			delete_func => \&_delete_issue
+		});
 }
 
 sub _issues {
 	my $self = shift;
 	return $self->rd->{issues};
+}
+
+sub _update_list {
+	my $self = shift;
+	my $params = shift;
+
+	my @current_list = @{$params->{current_list}};
+	my @updated_list = @{$params->{updated_list}};
+	my $add_func = $params->{add_func};
+	my $delete_func = $params->{delete_func};
+	my @options = @{$params->{options} // []};
+
+	for my $id (@current_list) {
+		$self->$delete_func($id, @options)
+			unless grep { $_ eq $id } @updated_list;
+	}
+	for my $id (@updated_list) {
+		$self->$add_func($id, @options)
+			unless grep { $_ eq $id } @current_list;
+	}	
 }
 
 sub _delete_issue {
@@ -141,7 +162,7 @@ sub _delete_issue {
 
 	my $issues = $self->_issues;
 	delete $issues->{$id};
-	$self->_merge_change({rd => {issues => {$id => ''}}});
+	$self->_merge_change({issues => {$id => ''}});
 }
 
 sub _merge_change {
@@ -158,23 +179,183 @@ sub _add_empty_issue {
 	my $id = shift;
 
 	my $issues = $self->_issues;
-	$issues->{$id} = {};
-	$self->_merge_change({rd => {issues => {$id => {}}}});
+	$issues->{$id} = {id => $id, stories => {}};
+	$self->_merge_change({issues => {$id => {}}});
 }
 
 sub on_update_issue {
 	my ($self, $path, $data) = @_;
-#	print "update issue $path $data\n";
+
+	my $issue = $self->_issue($path);
+	return
+		unless $issue;
+	$self->_update_issue_fields($issue, $data);
+	$self->_update_issue_stories($issue, $data);
+}
+
+sub _issue {
+	my $self = shift;
+	my $path = shift;
+	return $self->_issues->{$path->{issue}};
+}
+
+sub _update_issue_fields {
+	my $self = shift;
+	my $issue = shift;
+	my $data = shift;
+
+	my %change = $self->_get_change_hash($issue, $data, 'stories');
+	$self->_merge_change({issues => {$issue->{id} => \%change}});
+}
+
+sub _get_change_hash {
+	my $self = shift;
+	my $object = shift;
+	my $data = shift;
+	my $exception_field = shift;
+
+	my %change = ();
+	for my $field_id (keys %$data) {
+		next
+			if $exception_field and $field_id eq $exception_field;
+		my $old = $object->{$field_id};
+		my $new = $object->{$field_id} = $data->{$field_id};
+		$change{$field_id} = {new => $new};
+		$change{$field_id}{old} = $old
+			if defined($old);
+	}
+	return %change;
+}
+
+
+sub _update_issue_stories {
+	my $self = shift;
+	my $issue = shift;
+	my $data = shift;
+
+	my $stories = $data->{stories};
+	return
+		unless $stories;
+	$self->_update_list({
+			current_list => [ keys %{$issue->{stories} // {}} ],
+			updated_list => [ split(/,/, $stories) ],
+			add_func => \&_add_empty_story,
+			delete_func => \&_delete_story,
+			options => [ $issue ],
+		});
+}
+
+sub _add_empty_story {
+	my $self = shift;
+	my $id = shift;
+	my $issue = shift;
+
+	$issue->{stories}{$id} = {id => $id, parent => $issue->{id}, blocks => {}};
+	$self->_merge_change({stories => {$id => {parent => $issue->{id}}}});
+}
+
+sub _delete_story {
+	my $self = shift;
+	my $id = shift;
+	my $issue = shift;
+
+	delete $issue->{stories}{$id};
+	$self->_merge_change({stories => {$id => ''}});
 }
 
 sub on_update_story {
 	my ($self, $path, $data) = @_;
-#	print "update story $path $data\n";
+
+	my $story = $self->_story($path);
+	return
+		unless $story;
+	$self->_update_story_fields($story, $data);
+	$self->_update_story_blocks($story, $data);
+	$self->_merge_change({stories => {$story->{id} => {parent => $path->{issue}}}});
+}
+
+sub _story {
+	my $self = shift;
+	my $path = shift;
+
+	my $issue = $self->_issue($path);
+	return
+		unless $issue;
+	return $issue->{stories}{$path->{story}};
+}
+
+sub _update_story_fields {
+	my $self = shift;
+	my $story = shift;
+	my $data = shift;
+
+	my %change = $self->_get_change_hash($story, $data, 'blocks');
+	$self->_merge_change({stories => {$story->{id} => \%change}});
+}
+
+sub _update_story_blocks {
+	my $self = shift;
+	my $story = shift;
+	my $data = shift;
+
+	my $blocks = $data->{blocks};
+	return
+		unless $blocks;
+	$self->_update_list({
+			current_list => [ keys %{$story->{blocks}} ],
+			updated_list => [ split(/,/, $blocks) ],
+			add_func => \&_add_empty_block,
+			delete_func => \&_delete_block,
+			options => [ $story ],
+		});
+}
+
+sub _add_empty_block {
+	my $self = shift;
+	my $id = shift;
+	my $story = shift;
+
+	my $parent = "$story->{parent}/$story->{id}";
+	$story->{blocks}{$id} = {id => $id, parent => $parent};
+	$self->_merge_change({blocks => {$id => {parent => $parent}}});
+}
+
+sub _delete_block {
+	my $self = shift;
+	my $id = shift;
+	my $story = shift;
+
+	delete $story->{blocks}{$id};
+	$self->_merge_change({blocks => {$id => ''}});
 }
 
 sub on_update_block {
 	my ($self, $path, $data) = @_;
-#	print "update block $path $data\n";
+	
+	my $block = $self->_block($path);
+	return
+		unless $block;
+	$self->_update_block_fields($block, $data);
+	$self->_merge_change({blocks => {$block->{id} => {parent => "$path->{issue}/$path->{story}"}}});
+}
+
+sub _block {
+	my $self = shift;
+	my $path = shift;
+
+	my $story = $self->_story($path);
+	return
+		unless $story;
+	return $story->{blocks}{$path->{block}};
+}
+
+sub _update_block_fields {
+	my $self = shift;
+	my $block = shift;
+	my $data = shift;
+
+	my %change = $self->_get_change_hash($block, $data);
+	$self->_merge_change({blocks => {$block->{id} => \%change}});
 }
 
 sub _get_changes_clone {

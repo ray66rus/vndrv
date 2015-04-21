@@ -3,9 +3,9 @@ URL:          http://www.perl.com/CPAN/modules/02packages.details.txt
 Description:  Package names found in cpanfile.snapshot
 Columns:      package name, version, path
 Intended-For: Automated fetch routines, namespace documentation.
-Written-By:   Carton v1.0.12
-Line-Count:   589
-Last-Updated: Fri Apr 17 17:53:53 2015
+Written-By:   Carton v1.0.15
+Line-Count:   591
+Last-Updated: Mon Apr 20 19:10:41 2015
 
 App::Prove                             3.35  L/LE/LEONT/Test-Harness-3.35.tar.gz
 App::Prove::State                      3.35  L/LE/LEONT/Test-Harness-3.35.tar.gz
@@ -34,6 +34,7 @@ Class::MOP::Object                   2.1404  E/ET/ETHER/Moose-2.1404.tar.gz
 Class::MOP::Overload                 2.1404  E/ET/ETHER/Moose-2.1404.tar.gz
 Class::MOP::Package                  2.1404  E/ET/ETHER/Moose-2.1404.tar.gz
 Class::Method::Modifiers               2.11  E/ET/ETHER/Class-Method-Modifiers-2.11.tar.gz
+Clone                                  0.38  G/GA/GARU/Clone-0.38.tar.gz
 Config::JSON                         1.5202  R/RI/RIZEN/Config-JSON-1.5202.tar.gz
 Data::OptList                         0.109  R/RJ/RJBS/Data-OptList-0.109.tar.gz
 Devel::GlobalDestruction               0.13  H/HA/HAARG/Devel-GlobalDestruction-0.13.tar.gz
@@ -84,6 +85,7 @@ ExtUtils::Mksymlists                   7.04  B/BI/BINGOS/ExtUtils-MakeMaker-7.04
 ExtUtils::testlib                      7.04  B/BI/BINGOS/ExtUtils-MakeMaker-7.04.tar.gz
 Fatal                                  2.26  N/NT/NTHYKIER/autodie-2.26.tar.gz
 Harness::Hook                         undef  L/LE/LEONT/Test-Harness-3.35.tar.gz
+Hash::Merge                           0.200  R/RE/REHSACK/Hash-Merge-0.200.tar.gz
 JSON                                   2.90  M/MA/MAKAMAKA/JSON-2.90.tar.gz
 JSON::Backend::PP                      2.90  M/MA/MAKAMAKA/JSON-2.90.tar.gz
 JSON::Boolean                          2.90  M/MA/MAKAMAKA/JSON-2.90.tar.gz
