@@ -7,7 +7,6 @@ use Hash::Merge;
 
 has 'changes_queues' => (is => 'ro', isa => 'HashRef');
 has 'rd' => (is => 'ro', isa => 'HashRef');
-has 'data_lock' => (is => 'ro', isa => 'ScalarRef');
 has 'is_application_running' => (is => 'ro', isa => 'ScalarRef');
 has 'log' => (is => 'ro', isa => 'Log::Handler');
 has 'config' => (is => 'ro', isa => 'HashRef');
@@ -15,7 +14,6 @@ has 'config' => (is => 'ro', isa => 'HashRef');
 has 'drv' => (is => 'ro', isa => 'VN::Driver', default => sub { require VN::Driver; new VN::Driver });
 has 'merger' => (is => 'ro', isa => 'Hash::Merge', default => sub { Hash::Merge->new });
 has 'changes' => (is => 'rw', isa => 'HashRef', default => sub { {} });
-
 
 sub run {
 	my $self = shift;
@@ -46,8 +44,8 @@ sub _set_stop_thread_signal_handler {
 
 sub _init_rundown {
 	my $self = shift;
-	lock(${$self->data_lock});
-	$self->rd->{issues} = {};
+	lock(%{$self->rd});
+	$self->rd->{issues} = shared_clone({});
 }
 
 sub _is_terminated {
@@ -75,7 +73,7 @@ sub _sync_VN {
 
 	my $res;
 	eval {
-		lock(${$self->data_lock});
+		lock(%{$self->rd});
 		$res = $drv->Sync($arg ? $arg : undef, $flags);
 	};
 	$res = $@
@@ -183,7 +181,7 @@ sub _add_empty_issue {
 	my $id = shift;
 
 	my $issues = $self->_issues;
-	$issues->{$id} = {id => $id, stories => {}};
+	$issues->{$id} = shared_clone({id => $id, stories => {}});
 	$self->_merge_change({issues => {$id => {}}});
 }
 
@@ -254,15 +252,8 @@ sub _add_empty_story {
 	my $id = shift;
 	my $issue = shift;
 
-	my %empty_story = (
-		id => $id,
-		parent => {
-			issue => $issue->{id}
-		}
-	);
-	$self->_merge_change({stories => {id => \%empty_story}});
-	$empty_story{blocks} = {};
-	$issue->{stories}{$id} = \%empty_story;
+	$self->_merge_change({issues => {$issue->{id} => {stories => {$id => {id => $id}}}}});
+	$issue->{stories}{$id} = shared_clone({id => $id, blocks => {}});
 }
 
 sub _delete_story {
@@ -271,18 +262,17 @@ sub _delete_story {
 	my $issue = shift;
 
 	delete $issue->{stories}{$id};
-	$self->_merge_change({stories => {$id => ''}});
+	$self->_merge_change({issues => {$issue->{id} => {stories => {$id => ''}}}});
 }
 
 sub on_update_story {
 	my ($self, $path, $data) = @_;
 
-	my $story = $self->_story($path);
+	my %objects = (issue => $self->_issue($path), story => $self->_story($path));
 	return
-		unless $story;
-	$self->_update_story_fields($story, $data);
-	$self->_update_story_blocks($story, $data);
-	$self->_merge_change({stories => {$story->{id} => {parent => $path->{issue}}}});
+		unless $objects{issue} and $objects{story};
+	$self->_update_story_fields(\%objects, $data);
+	$self->_update_story_blocks(\%objects, $data);
 }
 
 sub _story {
@@ -290,70 +280,90 @@ sub _story {
 	my $path = shift;
 
 	my $issue = $self->_issue($path);
-	return
+	return undef
 		unless $issue;
 	return $issue->{stories}{$path->{story}};
 }
 
 sub _update_story_fields {
 	my $self = shift;
-	my $story = shift;
+	my $objects = shift;
 	my $data = shift;
 
+	my ($issue, $story) = ($objects->{issue}, $objects->{story});
 	my %change = $self->_get_change_hash($story, $data, 'blocks');
-	$self->_merge_change({stories => {$story->{id} => \%change}});
+	$self->_merge_change({issues => {$issue->{id} => {stories => {$story->{id} => \%change}}}});
 }
 
 sub _update_story_blocks {
 	my $self = shift;
-	my $story = shift;
+	my $objects = shift;
 	my $data = shift;
 
 	my $blocks = $data->{blocks};
 	return
 		unless $blocks;
+	my ($issue, $story) = ($objects->{issue}, $objects->{story});
 	$self->_update_list({
 			current_list => [ keys %{$story->{blocks}} ],
 			updated_list => [ split(/,/, $blocks) ],
 			add_func => \&_add_empty_block,
 			delete_func => \&_delete_block,
-			options => [ $story ],
+			options => [ $issue, $story ],
 		});
 }
 
 sub _add_empty_block {
 	my $self = shift;
 	my $id = shift;
+	my $issue = shift;
 	my $story = shift;
 
-	my %new_block = (
-		id => $id,
-		parent => {
-			issue => $story->{parent}{issue},
-			story => $story->{id},
+	$story->{blocks}{$id} = shared_clone({id => $id});
+	$self->_merge_change({
+		issues => {
+			$issue->{id} => {
+				stories => {
+					$story->{id} => {
+						blocks => {$id => {id => $id}}
+					}
+				}
+			}
 		}
-	);
-	$story->{blocks}{$id} = \%new_block;
-	$self->_merge_change({blocks => {$id => \%new_block}});
+	});
 }
 
 sub _delete_block {
 	my $self = shift;
 	my $id = shift;
+	my $issue = shift;
 	my $story = shift;
 
 	delete $story->{blocks}{$id};
-	$self->_merge_change({blocks => {$id => ''}});
+	$self->_merge_change({
+		issues => {
+			$issue->{id} => {
+				stories => {
+					$story->{id} => {
+						blocks => {$id => ''}
+					}
+				}
+			}
+		}
+	});
 }
 
 sub on_update_block {
 	my ($self, $path, $data) = @_;
 	
-	my $block = $self->_block($path);
+	my %objects = (
+		issue => $self->_issue($path),
+		story => $self->_story($path),
+		block => $self->_block($path)
+	);
 	return
-		unless $block;
-	$self->_update_block_fields($block, $data);
-	$self->_merge_change({blocks => {$block->{id} => {parent => "$path->{issue}/$path->{story}"}}});
+		unless $objects{issue} and $objects{story} and $objects{block};
+	$self->_update_block_fields(\%objects, $data);
 }
 
 sub _block {
@@ -361,18 +371,29 @@ sub _block {
 	my $path = shift;
 
 	my $story = $self->_story($path);
-	return
+	return undef
 		unless $story;
 	return $story->{blocks}{$path->{block}};
 }
 
 sub _update_block_fields {
 	my $self = shift;
-	my $block = shift;
+	my $objects = shift;
 	my $data = shift;
 
+	my ($issue, $story, $block) = ($objects->{issue}, $objects->{story}, $objects->{block});
 	my %change = $self->_get_change_hash($block, $data);
-	$self->_merge_change({blocks => {$block->{id} => \%change}});
+	$self->_merge_change({
+		issues => {
+			$issue->{id} => {
+				stories => {
+					$story->{id} => {
+						blocks => {$block->{id} => \%change}
+					}
+				}
+			}
+		}
+	});
 }
 
 1;

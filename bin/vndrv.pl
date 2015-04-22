@@ -18,7 +18,6 @@ use Time::HiRes qw( usleep );
 
 use lib "$Bin/../lib";
 use VNDRV::VNPeer;
-#use VNDRV::Connector::RouteTV;
 
 # log
 our $LOG = Log::Handler->new(screen => { log_to => 'STDERR', message_layout => '%m' });
@@ -29,8 +28,7 @@ my $CFG;
 
 #IPC
 my $IS_RUNNING :shared;
-my %VN_DATA = ();
-my $VN_DATA_LOCK :shared;
+my %VN_DATA :shared;
 my %CHANGES_QUEUES = ();
 
 ################
@@ -109,10 +107,11 @@ sub _create_and_start_module {
 	my $queue = Thread::Queue->new;
 	my $pkg_name = "VNDRV::Connector::$mod_name";
 	eval "require $pkg_name";
+	die $@
+		if $@;
 	my $module = new $pkg_name({
 		queue => $queue,
 		rd => \%VN_DATA,
-		data_lock => \$VN_DATA_LOCK,
 		is_application_running => \$IS_RUNNING,
 		log => $LOG,
 		config => $CFG->get("modules/$mod_name"),
@@ -126,7 +125,6 @@ sub start_vn_connector {
 	my $vn_client = new VNDRV::VNPeer({
 		changes_queues => \%CHANGES_QUEUES,
 		rd => \%VN_DATA,
-		data_lock => \$VN_DATA_LOCK,
 		is_application_running => \$IS_RUNNING,
 		log => $LOG,
 		config => $CFG->get('news'),
