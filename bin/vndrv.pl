@@ -18,6 +18,7 @@ use Time::HiRes qw( usleep );
 
 use lib "$Bin/../lib";
 use VNDRV::VNPeer;
+#use VNDRV::Connector::RouteTV;
 
 # log
 our $LOG = Log::Handler->new(screen => { log_to => 'STDERR', message_layout => '%m' });
@@ -28,8 +29,9 @@ my $CFG;
 
 #IPC
 my $IS_RUNNING :shared;
-my %VN_DATA :shared;
-my @VN_CHANGES = ();
+my %VN_DATA = ();
+my $VN_DATA_LOCK :shared;
+my %CHANGES_QUEUES = ();
 
 ################
 # main
@@ -39,6 +41,7 @@ eval {
 	init_config();
 	init_log();
 	init_ipc();
+	start_peers();
 	start_vn_connector();
 	while($IS_RUNNING) { sleep(1) }
 };
@@ -80,24 +83,58 @@ sub init_log {
 sub init_ipc {
 	$IS_RUNNING = 1;
 	%VN_DATA = ();
-	@VN_CHANGES = ( Thread::Queue->new );
 	$SIG{$_} = 'IGNORE'
 		for(keys %SIG);
 	$SIG{INT} = sub { cleanup(); exit(0) }
 }
 
-sub start_vn_connector {
-	my $vn_client = new VNDRV::VNPeer({
-		changes_queues => \@VN_CHANGES,
-		data => \%VN_DATA,
+sub start_peers {
+	my $modules = $CFG->get('modules') // {};
+	die 'No modules specified'
+		unless %$modules;
+	for my $mod_name (keys %$modules) {
+		eval {
+			_create_and_start_module($mod_name);
+		};
+		$LOG->error("NUD0013E Can't start process for $mod_name connector #$@")
+			if $@;
+	}
+	die "Failed to start any module connector"
+		unless %CHANGES_QUEUES;
+}
+
+sub _create_and_start_module {
+	my $mod_name = shift;
+
+	my $queue = Thread::Queue->new;
+	my $pkg_name = "VNDRV::Connector::$mod_name";
+	eval "require $pkg_name";
+	my $module = new $pkg_name({
+		queue => $queue,
+		rd => \%VN_DATA,
+		data_lock => \$VN_DATA_LOCK,
 		is_application_running => \$IS_RUNNING,
 		log => $LOG,
-		config => $CFG,
+		config => $CFG->get("modules/$mod_name"),
+	});
+	die
+		unless defined(threads->create({context => 'void'}, \&VNDRV::Connector::run, $module));
+	$CHANGES_QUEUES{$mod_name} = $queue;
+}
+
+sub start_vn_connector {
+	my $vn_client = new VNDRV::VNPeer({
+		changes_queues => \%CHANGES_QUEUES,
+		rd => \%VN_DATA,
+		data_lock => \$VN_DATA_LOCK,
+		is_application_running => \$IS_RUNNING,
+		log => $LOG,
+		config => $CFG->get('news'),
 	});
 	return
 		if defined(threads->create({context => 'void'}, \&VNDRV::VNPeer::run, $vn_client));
 	$LOG->crit("NUD0001F Can't start process for Broadcast.me News connector");
-	die "Can't start News connector";
+	die "Can't start Broadcast.me News connector";
 }
 
 sub cleanup {

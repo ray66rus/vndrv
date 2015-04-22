@@ -3,16 +3,15 @@ package VNDRV::VNPeer;
 use Moose;
 use threads;
 use threads::shared;
-use Storable qw( dclone );
 use Hash::Merge;
 
-has 'changes_queues' => (is => 'ro', isa => 'ArrayRef');
-has 'data' => (is => 'ro', isa => 'HashRef');
+has 'changes_queues' => (is => 'ro', isa => 'HashRef');
+has 'rd' => (is => 'ro', isa => 'HashRef');
+has 'data_lock' => (is => 'ro', isa => 'ScalarRef');
 has 'is_application_running' => (is => 'ro', isa => 'ScalarRef');
 has 'log' => (is => 'ro', isa => 'Log::Handler');
-has 'config' => (is => 'ro', isa => 'Config::JSON');
+has 'config' => (is => 'ro', isa => 'HashRef');
 
-has 'rd' => (is => 'ro', isa => 'HashRef', default => sub { { issues => {} } });
 has 'drv' => (is => 'ro', isa => 'VN::Driver', default => sub { require VN::Driver; new VN::Driver });
 has 'merger' => (is => 'ro', isa => 'Hash::Merge', default => sub { Hash::Merge->new });
 has 'changes' => (is => 'rw', isa => 'HashRef', default => sub { {} });
@@ -24,9 +23,9 @@ sub run {
 	$self->log->info("NUD0004I Broadcast.me News connector started");
 
 	$self->_set_stop_thread_signal_handler;
-
-	my $sync_interval = $self->config->get('news/sync_interval') // 4;
+	my $sync_interval = $self->config->{sync_interval} // 4;
 	eval {	
+		$self->_init_rundown;
 		while(!$self->_is_terminated) {
 			$self->_clear_changes;
 			$self->_sync_VN;
@@ -34,15 +33,21 @@ sub run {
 			sleep $sync_interval;
 		}
 	};
-	$self->log->error("NUD0005F Critical error in News peer: $@")
+	$self->log->error("NUD0005F Critical error in News connector: $@")
 		if($@);
-	$self->log->debug("NUD0006I Exit from News peer thread");
+	$self->log->debug("NUD0006I Exit from News connector thread");
 	$self->_send_termination_signal;
 }
 
 sub _set_stop_thread_signal_handler {
 	my $self = shift;
 	$SIG{STOP} = sub { threads->exit };
+}
+
+sub _init_rundown {
+	my $self = shift;
+	lock(${$self->data_lock});
+	$self->rd->{issues} = {};
 }
 
 sub _is_terminated {
@@ -67,13 +72,11 @@ sub _sync_VN {
 	return "VN::Driver is not initialized"
 		unless $drv->is_active;
 
+
 	my $res;
 	eval {
-		if($arg) {
-			$res = $drv->Sync($arg, $flags);
-		} else {
-			$res = $drv->Sync(undef, $flags);
-		}
+		lock(${$self->data_lock});
+		$res = $drv->Sync($arg ? $arg : undef, $flags);
 	};
 	$res = $@
 		if($@);
@@ -89,8 +92,8 @@ sub _init_driver {
 
 	my $drv = $self->drv;
 	eval {
-		$drv->init($self->config->get('news/host') // 'localhost', 
-				$self->config->get('news/port') // 9898);
+		$drv->init($self->config->{host} // 'localhost', 
+				$self->config->{port} // 9898);
 	};
 	if($@) {
 		$self->log->crit("NUD0007F Can't initialize News Driver: $@");
@@ -113,10 +116,11 @@ sub _clear_changes {
 sub _add_changes_to_queues {
 	my $self = shift;
 
+	my $changes = $self->changes; 
 	return
-		unless %{$self->changes};
-	for my $queue (@{$self->changes_queues}) {
-		$queue->enqueue($self->_get_changes_clone);
+		unless %$changes;
+	for my $queue (values %{$self->changes_queues}) {
+		$queue->enqueue($changes);
 	}
 }
 
@@ -250,8 +254,15 @@ sub _add_empty_story {
 	my $id = shift;
 	my $issue = shift;
 
-	$issue->{stories}{$id} = {id => $id, parent => $issue->{id}, blocks => {}};
-	$self->_merge_change({stories => {$id => {parent => $issue->{id}}}});
+	my %empty_story = (
+		id => $id,
+		parent => {
+			issue => $issue->{id}
+		}
+	);
+	$self->_merge_change({stories => {id => \%empty_story}});
+	$empty_story{blocks} = {};
+	$issue->{stories}{$id} = \%empty_story;
 }
 
 sub _delete_story {
@@ -315,9 +326,15 @@ sub _add_empty_block {
 	my $id = shift;
 	my $story = shift;
 
-	my $parent = "$story->{parent}/$story->{id}";
-	$story->{blocks}{$id} = {id => $id, parent => $parent};
-	$self->_merge_change({blocks => {$id => {parent => $parent}}});
+	my %new_block = (
+		id => $id,
+		parent => {
+			issue => $story->{parent}{issue},
+			story => $story->{id},
+		}
+	);
+	$story->{blocks}{$id} = \%new_block;
+	$self->_merge_change({blocks => {$id => \%new_block}});
 }
 
 sub _delete_block {
@@ -357,11 +374,5 @@ sub _update_block_fields {
 	my %change = $self->_get_change_hash($block, $data);
 	$self->_merge_change({blocks => {$block->{id} => \%change}});
 }
-
-sub _get_changes_clone {
-	my $self = shift;
-	return dclone($self->changes);
-}
-
 
 1;
