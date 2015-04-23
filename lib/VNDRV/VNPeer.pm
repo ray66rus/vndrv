@@ -4,9 +4,11 @@ use Moose;
 use threads;
 use threads::shared;
 use Hash::Merge;
+use Data::Dumper;
 
 has 'changes_queues' => (is => 'ro', isa => 'HashRef');
 has 'rd' => (is => 'ro', isa => 'HashRef');
+has 'feedback' => (is => 'ro', isa => 'Thread::Queue');
 has 'is_application_running' => (is => 'ro', isa => 'ScalarRef');
 has 'log' => (is => 'ro', isa => 'Log::Handler');
 has 'config' => (is => 'ro', isa => 'HashRef');
@@ -14,6 +16,7 @@ has 'config' => (is => 'ro', isa => 'HashRef');
 has 'drv' => (is => 'ro', isa => 'VN::Driver', default => sub { require VN::Driver; new VN::Driver });
 has 'merger' => (is => 'ro', isa => 'Hash::Merge', default => sub { Hash::Merge->new });
 has 'changes' => (is => 'rw', isa => 'HashRef', default => sub { {} });
+has 'max_feedback_size' => (is => 'rw', isa => 'Int', default => 10);
 
 sub run {
 	my $self = shift;
@@ -26,7 +29,8 @@ sub run {
 		$self->_init_rundown;
 		while(!$self->_is_terminated) {
 			$self->_clear_changes;
-			$self->_sync_VN;
+			my $feedback = $self->_get_feedback;
+			$self->_sync_VN($feedback);
 			$self->_add_changes_to_queues;
 			sleep $sync_interval;
 		}
@@ -44,6 +48,9 @@ sub _set_stop_thread_signal_handler {
 
 sub _init_rundown {
 	my $self = shift;
+
+	$self->max_feedback_size($self->config->{max_feedback_size})
+		if $self->config->{max_feedback_size};
 	lock(%{$self->rd});
 	$self->rd->{issues} = shared_clone({});
 }
@@ -120,6 +127,83 @@ sub _add_changes_to_queues {
 	for my $queue (values %{$self->changes_queues}) {
 		$queue->enqueue($changes);
 	}
+}
+
+sub _get_feedback {
+	my $self = shift;
+
+	my $feedback = {};
+	my $counter = 0;
+	while($counter++ < $self->max_feedback_size and defined(my $msg = $self->feedback->dequeue_nb)) {
+		$feedback = $self->merger->merge($msg, $feedback);
+	}
+	return
+		unless %$feedback;
+
+	$self->log->debug('NUD0017I Got feedback #' . Data::Dumper->Dump([$feedback]));
+	return $self->_translate_feedback_to_text($feedback);
+}
+
+sub _translate_feedback_to_text {
+	my $self = shift;
+	my $feedback = shift;
+
+	my @res = ();
+	for my $i_id (keys %{$feedback->{issues}}) {
+		my $issue = $feedback->{issues}{$i_id};
+		push @res, "issue:issue:$i_id";
+		$self->_add_object_fields_to_feedback($issue, \@res, 'stories');
+		push @res, '#';
+		$self->_add_issue_stories_to_feedback($issue, "issue:/$i_id", \@res);
+	}
+	my $res = join("\n", @res) . "\n";
+	$self->log->debug("NUD0018I Sending feedback to news #$res");
+	return $res;
+}
+
+sub _add_object_fields_to_feedback {
+	my $self = shift;
+	my $object = shift;
+	my $res = shift;
+	my $exclude_field = shift;	
+
+	for my $field_id (keys %$object) {
+		push @$res, "$field_id:$object->{$field_id}"
+			unless $exclude_field and $field_id eq $exclude_field;
+	}
+}
+
+sub _add_issue_stories_to_feedback {
+	my $self = shift;
+	my $issue = shift;
+	my $path = shift;
+	my $res = shift;
+
+	return
+		unless $issue->{stories};
+	for my $s_id (keys %{$issue->{stories}}) {
+		my $story = $issue->{stories}{$s_id};
+		push @$res, "story:$path/story:$s_id";
+		$self->_add_object_fields_to_feedback($story, $res, 'blocks');
+		push @$res, '#';
+		$self->_add_story_blocks_to_feedback($story, "$path/story:$s_id", $res);
+	}
+}
+
+sub _add_story_blocks_to_feedback {
+	my $self = shift;
+	my $story = shift;
+	my $path = shift;
+	my $res = shift;
+
+	return
+		unless $story->{blocks};
+	for my $b_id (keys %{$story->{blocks}}) {
+		my $block = $story->{blocks}{$b_id};
+		push @$res, "block:$path/block:$b_id";
+		$self->_add_object_fields_to_feedback($block, $res);
+		push @$res, '#';
+	}	
 }
 
 sub on_update_rundown {

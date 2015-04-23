@@ -2,7 +2,7 @@
 
 use Modern::Perl;
 
-use constant VERSION => "0.1.0";
+use constant VERSION => "0.9.0";
 
 use threads;
 use Thread::Queue;
@@ -30,6 +30,7 @@ my $CFG;
 my $IS_RUNNING :shared;
 my %VN_DATA :shared;
 my %CHANGES_QUEUES = ();
+my $FEEDBACK_QUEUE;
 
 ################
 # main
@@ -81,6 +82,7 @@ sub init_log {
 sub init_ipc {
 	$IS_RUNNING = 1;
 	%VN_DATA = ();
+	$FEEDBACK_QUEUE = Thread::Queue->new;
 	$SIG{$_} = 'IGNORE'
 		for(keys %SIG);
 	$SIG{INT} = sub { cleanup(); exit(0) }
@@ -110,8 +112,9 @@ sub _create_and_start_module {
 	die $@
 		if $@;
 	my $module = new $pkg_name({
-		queue => $queue,
+		changes => $queue,
 		rd => \%VN_DATA,
+		feedback => $FEEDBACK_QUEUE,
 		is_application_running => \$IS_RUNNING,
 		log => $LOG,
 		config => $CFG->get("modules/$mod_name"),
@@ -125,6 +128,7 @@ sub start_vn_connector {
 	my $vn_client = new VNDRV::VNPeer({
 		changes_queues => \%CHANGES_QUEUES,
 		rd => \%VN_DATA,
+		feedback => $FEEDBACK_QUEUE,
 		is_application_running => \$IS_RUNNING,
 		log => $LOG,
 		config => $CFG->get('news'),

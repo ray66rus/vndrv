@@ -1,15 +1,10 @@
 package VNDRV::Connector::RouteTV;
 
 use Moose;
-use JSON::XS;
-use LWP::UserAgent;
-use HTTP::Cookies;
 
 extends 'VNDRV::Connector';
 
 has 'published_issues' => (is => 'ro', isa => 'HashRef', default => sub { {} });
-has 'json' => (is => 'ro', isa => 'JSON::XS', default => sub { my $json = JSON::XS->new; $json->allow_nonref; return $json });
-has 'ua' => (is => 'ro', isa => 'LWP::UserAgent', default => sub { my $ua = LWP::UserAgent->new; $ua->cookie_jar(HTTP::Cookies->new); return $ua });
 
 sub BUILD {
 	my $self = shift;
@@ -91,18 +86,28 @@ sub _update_playlist {
 	my $self = shift;
 	my $id = shift;
 
-	my $playlist = $self->_generate_playlist($id);
-	my $url = $self->config->{url};
+	eval {
+		my $playlist = $self->_generate_playlist($id);
+		die "Issue '$id' not found"
+			unless $playlist;
+		$self->log->debug("NUD0014I Playlist for issue '$id' created #" . Data::Dumper->Dump([$playlist]));
 
-	my $req_result = $self->ua->post($url, {data => $self->json->encode($playlist)});
-	if(!$req_result->is_success) {
-		$self->log->error("NUD0014E Failed to publish issue: can't request $url");
-		return;
+		my $url = $self->config->{url};
+		my $req_result = $self->ua->post($url, {data => $self->json->encode($playlist)});
+		die "Can't request $url"
+			unless $req_result->is_success;
+
+		my $reply = $self->json->decode($req_result->decoded_content);
+		die $reply->{message}
+			unless $reply->{status} eq 'success';
+	};
+	if($@) {
+		$self->log->warn("NUD0015W Failed to publish issue '$id' #$@");
+		$self->send_feedback({issues => {$id => {publish_state => 0}}});
+	} else {
+		$self->log->debug("NUD0016I Issue '$id' was published");
+		$self->send_feedback({issues => {$id => {publish_state => 1}}});
 	}
-
-	my $reply = $self->json->decode($req_result->decoded_content);
-	$self->log->error("NUD0015E Failed to publish issue: $reply->{message}")
-		unless $reply->{status} eq 'success';
 }
 
 sub _generate_playlist {
@@ -110,6 +115,12 @@ sub _generate_playlist {
 	my $id = shift;
 
 	my $issue = $self->get_issue({issue => $id});
+	if(!$issue) {
+		$self->log->warn("NUD0016W Issue '$id' not found");
+		return '';
+	}
+	return ''
+		unless $issue;
 	my @stories = ();
 	for my $s_id ($self->_sort_by_position($issue->{stories})) {
 		my $story = $issue->{stories}{$s_id};

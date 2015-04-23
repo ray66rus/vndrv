@@ -3,11 +3,20 @@ package VNDRV::Connector;
 use Moose;
 use threads;
 
-has 'queue' => (is => 'ro', isa => 'Thread::Queue');
+use JSON::XS;
+use LWP::UserAgent;
+use HTTP::Cookies;
+use Data::Dumper;
+
+has 'changes' => (is => 'ro', isa => 'Thread::Queue');
 has 'rd' => (is => 'ro', isa => 'HashRef');
+has 'feedback' => (is => 'ro', isa => 'Thread::Queue');
 has 'is_application_running' => (is => 'ro', isa => 'ScalarRef');
 has 'log' => (is => 'ro', isa => 'Log::Handler');
 has 'config' => (is => 'ro', isa => 'HashRef');
+
+has 'json' => (is => 'ro', isa => 'JSON::XS', default => sub { my $json = JSON::XS->new; $json->allow_nonref; return $json });
+has 'ua' => (is => 'ro', isa => 'LWP::UserAgent', default => sub { my $ua = LWP::UserAgent->new; $ua->cookie_jar(HTTP::Cookies->new); return $ua });
 
 sub run {
 	my $self = shift;
@@ -18,7 +27,7 @@ sub run {
 	$self->_set_stop_thread_signal_handler;
 	eval {	
 		while(!$self->_is_terminated) {
-			if(defined(my $changes = $self->queue->dequeue_timed(1))) {
+			if(defined(my $changes = $self->changes->dequeue_timed(1))) {
 				$self->_process_changes($changes);
 			}
 		}
@@ -113,6 +122,12 @@ sub get_block {
 		$block = $story->{blocks}{$path->{block}};
 	};
 	return $block ? $self->_copy_from_shared($block) : '';
+}
+
+sub send_feedback {
+	my $self = shift;
+	my $feedback = shift;
+	$self->feedback->enqueue($feedback);
 }
 
 1;
