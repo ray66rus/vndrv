@@ -355,7 +355,7 @@ sub _delete_block {
 
 sub on_update_block {
 	my ($self, $path, $data) = @_;
-	
+
 	my %objects = (
 		issue => $self->_issue($path),
 		story => $self->_story($path),

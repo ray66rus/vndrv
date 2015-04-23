@@ -1,10 +1,21 @@
 package VNDRV::Connector::RouteTV;
 
 use Moose;
+use JSON::XS;
+use LWP::UserAgent;
+use HTTP::Cookies;
 
 extends 'VNDRV::Connector';
 
 has 'published_issues' => (is => 'ro', isa => 'HashRef', default => sub { {} });
+has 'json' => (is => 'ro', isa => 'JSON::XS', default => sub { my $json = JSON::XS->new; $json->allow_nonref; return $json });
+has 'ua' => (is => 'ro', isa => 'LWP::UserAgent', default => sub { my $ua = LWP::UserAgent->new; $ua->cookie_jar(HTTP::Cookies->new); return $ua });
+
+sub BUILD {
+	my $self = shift;
+	die "Mandatory parameter 'url' not found"
+		unless $self->config->{url};
+}
 
 sub _process_changes {
 	my $self = shift;
@@ -81,8 +92,17 @@ sub _update_playlist {
 	my $id = shift;
 
 	my $playlist = $self->_generate_playlist($id);
-	use Data::Dumper;
-	print Data::Dumper->Dump([$playlist]);
+	my $url = $self->config->{url};
+
+	my $req_result = $self->ua->post($url, {data => $self->json->encode($playlist)});
+	if(!$req_result->is_success) {
+		$self->log->error("NUD0014E Failed to publish issue: can't request $url");
+		return;
+	}
+
+	my $reply = $self->json->decode($req_result->decoded_content);
+	$self->log->error("NUD0015E Failed to publish issue: $reply->{message}")
+		unless $reply->{status} eq 'success';
 }
 
 sub _generate_playlist {

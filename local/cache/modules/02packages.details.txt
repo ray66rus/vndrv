@@ -3,9 +3,9 @@ URL:          http://www.perl.com/CPAN/modules/02packages.details.txt
 Description:  Package names found in cpanfile.snapshot
 Columns:      package name, version, path
 Intended-For: Automated fetch routines, namespace documentation.
-Written-By:   Carton v1.0.15
+Written-By:   Carton v1.0.12
 Line-Count:   591
-Last-Updated: Mon Apr 20 19:10:41 2015
+Last-Updated: Thu Apr 23 11:53:35 2015
 
 App::Prove                             3.35  L/LE/LEONT/Test-Harness-3.35.tar.gz
 App::Prove::State                      3.35  L/LE/LEONT/Test-Harness-3.35.tar.gz

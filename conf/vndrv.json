@@ -6,6 +6,8 @@
     "level" : "debug"
   },
   "modules" : {
-    "RouteTV" : {}
+    "RouteTV" : {
+      "url" : "http://localhost:3000/mock/translate_cmtv_clip_ids"
+    }
   }
 }
