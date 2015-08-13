@@ -6,8 +6,7 @@
     "level" : "debug"
   },
   "modules" : {
-    "RouteTV" : {
-      "url" : "http://localhost:3000/mock/translate_cmtv_clip_ids"
+    "CasparCG" : {
     }
   }
 }
