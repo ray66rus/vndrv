@@ -116,7 +116,7 @@ sub _generate_playlist {
 
 	my $issue = $self->get_issue({issue => $id});
 	if(!$issue) {
-		$self->log->warn("NUD0016W Issue '$id' not found");
+		$self->log->warn("NUD0019W Issue '$id' not found");
 		return '';
 	}
 	return ''

@@ -1,6 +1,6 @@
 -- 
 -- Created by SQL::Translator::Producer::PostgreSQL
--- Created on Thu Aug 13 18:51:00 2015
+-- Created on Thu Aug 13 20:51:56 2015
 -- 
 --
 -- Table: news_data
@@ -11,12 +11,12 @@ CREATE TABLE news_data (
   last timestamp with time zone NOT NULL,
   captions json,
   issue_id bigint NOT NULL,
-  issue_slug text NOT NULL,
+  issue_slug text,
   story_id bigint NOT NULL,
-  story_slug text NOT NULL,
+  story_slug text,
   block_id bigint NOT NULL,
-  block_slug text NOT NULL,
+  block_slug text,
   PRIMARY KEY (id),
-  CONSTRAINT captions_constr UNIQUE (issue_id, story_id, block_id)
+  CONSTRAINT path UNIQUE (issue_id, story_id, block_id)
 );
 

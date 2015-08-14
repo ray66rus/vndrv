@@ -23,24 +23,27 @@ __PACKAGE__->add_columns(
 		data_type => 'bigint'
 	},
 	issue_slug => {
-		data_type => 'text'
+		data_type => 'text',
+		is_nullable => 1,
 	},
 	story_id => {
 		data_type => 'bigint'
 	},
 	story_slug => {
-		data_type => 'text'
+		data_type => 'text',
+		is_nullable => 1,
 	},
 	block_id => {
 		data_type => 'bigint'
 	},
 	block_slug => {
-		data_type => 'text'
+		data_type => 'text',
+		is_nullable => 1,
 	}
 );
 
 # Tell DBIC  that 'id' is the primary key
 __PACKAGE__->set_primary_key('id');
-__PACKAGE__->add_unique_constraint('captions_constr' => [qw/issue_id story_id block_id/]);
+__PACKAGE__->add_unique_constraint('path' => [qw/issue_id story_id block_id/]);
 
 1;
