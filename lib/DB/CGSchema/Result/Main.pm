@@ -46,4 +46,12 @@ __PACKAGE__->add_columns(
 __PACKAGE__->set_primary_key('id');
 __PACKAGE__->add_unique_constraint('path' => [qw/issue_id story_id block_id/]);
 
+sub sqlt_deploy_hook {
+	my ($self, $sqlt_table) = @_;
+	$sqlt_table->add_index(name => 'issue_id_idx', fields => ['issue_id']);
+	$sqlt_table->add_index(name => 'story_id_idx', fields => ['story_id']);
+	$sqlt_table->add_index(name => 'block_id_idx', fields => ['block_id']);
+	$sqlt_table->add_index(name => 'timestamp_idx', fields => ['last']);
+}
+
 1;
