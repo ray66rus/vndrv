@@ -9,7 +9,7 @@ BEGIN { unshift @INC, "$FindBin::Bin/../lib" }
 use DB::CGSchema;
 use Getopt::Long;
 
-my ($preversion, $mode, $dbname, $dbhost, $dbuser, $dbpass) = ('', '', 'news_data', 'localhost', 'mmp', 'mmp');
+my ($preversion, $mode, $dbname, $dbhost, $dbuser, $dbpass, $dbtype) = ('', '', 'news_data', 'localhost', 'mmp', 'mmp', 'Pg');
 GetOptions(
 	'p|preversion:s'  => \$preversion,
 	'm|mode:s' => \$mode,
@@ -17,12 +17,13 @@ GetOptions(
 	'a|addr:s' => \$dbhost,
 	'u|user:s' => \$dbuser,
 	'p|pass:s' => \$dbpass,
+	't|type:s' => \$dbtype,
 ) or die "Can't get options from command line";
 
 die "Unknown mode '$mode'"
 	if($mode and $mode ne 'init' and $mode ne 'upgrade');
 
-my $schema = DB::CGSchema->connect("dbi:Pg:dbname=$dbname;host=$dbhost", $dbuser, $dbpass);
+my $schema = DB::CGSchema->connect("dbi:$dbtype:dbname=$dbname;host=$dbhost", $dbuser, $dbpass);
 
 if($mode eq 'init') {
 	print "Initializing...\n";
