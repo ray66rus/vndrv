@@ -10,3 +10,5 @@ requires 'pp';
 requires 'DBIx::Class::Schema';
 requires 'SQL::Translator';
 requires 'DBD::Pg';
+requires 'DBD::mysql';
+
