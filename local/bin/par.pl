@@ -1,4 +1,7 @@
 #!/home/ray/perl5/perlbrew/perls/threaded-perl-5.18.2/bin/perl
+
+eval 'exec /home/ray/perl5/perlbrew/perls/threaded-perl-5.18.2/bin/perl  -S $0 ${1+"$@"}'
+    if 0; # not running under some shell
 eval 'exec /usr/bin/perl  -S $0 ${1+"$@"}'
     if 0; # not running under some shell
 

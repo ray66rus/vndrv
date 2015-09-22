@@ -1,1 +1,1 @@
-{"provides":{"DBD::Pg":{"version":"v3.5.1","file":"Pg.pm"},"Bundle::DBD::Pg":{"file":"lib/Bundle/DBD/Pg.pm","version":"v3.5.1"}},"pathname":"T/TU/TURNSTEP/DBD-Pg-3.5.1.tar.gz","version":"v3.5.1","target":"DBD::Pg","name":"DBD::Pg","dist":"DBD-Pg-3.5.1"}
+{"version":"v3.5.1","name":"DBD::Pg","dist":"DBD-Pg-3.5.1","provides":{"Bundle::DBD::Pg":{"file":"lib/Bundle/DBD/Pg.pm","version":"v3.5.1"},"DBD::Pg":{"version":"v3.5.1","file":"Pg.pm"}},"pathname":"T/TU/TURNSTEP/DBD-Pg-3.5.1.tar.gz","target":"DBD::Pg"}

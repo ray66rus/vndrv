@@ -13,7 +13,7 @@ my ($preversion, $mode, $dbname, $dbhost, $dbuser, $dbpass, $dbtype) = ('', '', 
 GetOptions(
 	'p|preversion:s'  => \$preversion,
 	'm|mode:s' => \$mode,
-	'n|name:s' => \$dbname,
+	'b|db_name:s' => \$dbname,
 	'a|addr:s' => \$dbhost,
 	'u|user:s' => \$dbuser,
 	'p|pass:s' => \$dbpass,

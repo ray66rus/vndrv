@@ -1,4 +1,4 @@
-package VNDRV::Connector::CasparCG;
+package VNDRV::Connector::CG;
 
 use Moose;
 
@@ -13,13 +13,13 @@ sub BUILD {
 	my $self = shift;
 
 	my $db_config = $self->config->{db} // {};
-	my $addr = $db_config->{addr} // 'localhost';
-	my $user = $db_config->{user} // 'mmp';
-	my $pass = $db_config->{pass} // 'mmp';
-	my $sql_driver = $db_config->{db_type} // 'Pg';
-	my $dbname = $db_config->{name} // 'news_data';
+	my $addr = $db_config->{addr};
+	my $user = $db_config->{user};
+	my $pass = $db_config->{pass};
+	my $db_name = $db_config->{db_name} // 'news_data';
+	my $db_drv = $db_config->{db_drv} // 'Pg';
 
-	$self->{db} = DB::CGSchema->connect("dbi:$sql_driver:dbname=$dbname;host=$addr", $user, $pass);
+	$self->{db} = DB::CGSchema->connect("dbi:$db_drv:dbname=$db_name;host=$addr", $user, $pass);
 	$self->{data} = $self->{db}->resultset('Main');
 	$self->data->delete_all;
 	$self->data->create({issue_id => 0, story_id => 0, block_id => 0, last => \'NOW()'});

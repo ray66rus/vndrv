@@ -13,10 +13,10 @@ __PACKAGE__->add_columns(
 		is_auto_increment => 1,
 	},
 	last => {
-		data_type => 'timestamp with time zone'
+		data_type => 'timestamp'
 	},
 	captions => {
-		data_type => 'json',
+		data_type => 'text',
 		is_nullable => 1,
 	},
 	issue_id => {

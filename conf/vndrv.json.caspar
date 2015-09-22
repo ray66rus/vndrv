@@ -1,0 +1,19 @@
+{
+  "news" : {
+    "host" : "localhost"
+  },
+  "log" : {
+    "level" : "debug"
+  },
+  "modules" : {
+    "CG" : {
+      "db" : {
+        "addr" : "localhost",
+        "user" : "mmp",
+        "pass" : "mmp",
+        "db_name" : "news_data",
+        "db_drv" : "Pg"
+      }
+    }
+  }
+}

@@ -6,7 +6,14 @@
     "level" : "debug"
   },
   "modules" : {
-    "CasparCG" : {
+    "CG" : {
+      "db" : {
+        "addr" : "192.168.186.166",
+        "user" : "root",
+        "pass" : "root",
+        "db_name" : "test",
+        "db_drv" : "mysql"
+      }
     }
   }
 }
