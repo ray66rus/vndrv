@@ -4,6 +4,26 @@ use Moose;
 
 extends 'VNDRV::Connector';
 
+has 'db' => (is => 'ro', isa => 'Schema');
+
+sub BUILD {
+	my $self = shift;
+
+	my $db_config = $self->config->{db} // {};
+	my $addr = $db_config->{addr};
+	my $user = $db_config->{user};
+	my $pass = $db_config->{pass};
+	my $db_name = $db_config->{db_name} // 'news_data';
+
+	my $db_drv = $self->_db_drv_info;
+
+	$self->{db} = $db_drv->{schema}->connect("dbi:$db_drv->{name}:dbname=$db_name;host=$addr", $user, $pass, $db_drv->{options});
+
+	$self->{data} = $self->{db}->resultset('Main');
+	$self->data->delete_all;
+	$self->data->create({issue_id => 0, story_id => 0, block_id => 0, last => \'NOW()'});
+}
+
 sub _process_changes {
 	my $self = shift;
 	my $changes = shift;

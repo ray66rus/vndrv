@@ -6,12 +6,12 @@
     "level" : "debug"
   },
   "modules" : {
-    "CG::Caspar" : {
+    "CG::Orad" : {
       "db" : {
-        "addr" : "localhost",
-        "user" : "mmp",
-        "pass" : "mmp",
-        "db_name" : "news_data",
+        "addr" : "192.168.186.166",
+        "user" : "root",
+        "pass" : "root",
+        "db_name" : "test",
       }
     }
   }
