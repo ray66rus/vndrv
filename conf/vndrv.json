@@ -1,18 +1,17 @@
 {
   "news" : {
-    "host" : "localhost"
+    "host" : "192.168.181.11"
   },
   "log" : {
     "level" : "debug"
   },
   "modules" : {
-    "CG" : {
+    "CG::Orad" : {
       "db" : {
         "addr" : "192.168.186.166",
         "user" : "root",
         "pass" : "root",
         "db_name" : "test",
-        "db_drv" : "mysql"
       }
     }
   }

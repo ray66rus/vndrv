@@ -2,28 +2,7 @@ package VNDRV::Connector::CG;
 
 use Moose;
 
-use DB::CGSchema;
-
 extends 'VNDRV::Connector';
-
-has 'db' => (is => 'ro', isa => 'Schema');
-has 'data' => (is => 'ro', isa => 'DB::CGSchema::Result::Main');
-
-sub BUILD {
-	my $self = shift;
-
-	my $db_config = $self->config->{db} // {};
-	my $addr = $db_config->{addr};
-	my $user = $db_config->{user};
-	my $pass = $db_config->{pass};
-	my $db_name = $db_config->{db_name} // 'news_data';
-	my $db_drv = $db_config->{db_drv} // 'Pg';
-
-	$self->{db} = DB::CGSchema->connect("dbi:$db_drv:dbname=$db_name;host=$addr", $user, $pass);
-	$self->{data} = $self->{db}->resultset('Main');
-	$self->data->delete_all;
-	$self->data->create({issue_id => 0, story_id => 0, block_id => 0, last => \'NOW()'});
-}
 
 sub _process_changes {
 	my $self = shift;
@@ -76,9 +55,9 @@ sub _add_issue {
 	my $i_id = shift;
 
 	my $issue = $self->get_issue({issue => $i_id});
-	my $slug = $issue->{slug};
+	my ($slug, $start_time) = ($issue->{slug}, int($issue->{begin}/1000));
 	$self->data->find({issue_id => 0, story_id => 0, block_id => 0}, {key => 'path'})->update({last => \'NOW()'});
-	$self->data->update_or_create({issue_id => $i_id, issue_slug => $slug, story_id => 0, block_id => 0, last => \'NOW()'});
+	$self->data->update_or_create({issue_id => $i_id, issue_start => $self->_get_time_field_value($start_time), issue_name => $slug, story_id => 0, block_id => 0, last => \'NOW()'});
 	for my $s_id (keys %{$issue->{stories}}) {
 		my $story = $issue->{stories}{$s_id};
 		next
@@ -93,7 +72,7 @@ sub _add_issue {
 
 sub _is_significant_issue_field_changed {
 	my $issue_data = shift;
-	return (defined($issue_data->{slug}) or defined($issue_data->{stories})) ? 1 : 0;
+	return (defined($issue_data->{slug}) or defined($issue_data->{stories} or defined($issue_data->{begin}))) ? 1 : 0;
 }
 
 sub _update_issue_data {
@@ -105,8 +84,11 @@ sub _update_issue_data {
 	return
 		unless _is_air_issue($issue);
 
-	$self->data->search({issue_id => $i_id})->update({issue_slug => $issue->{slug}, last => \'NOW()'})
-		if defined($issue_delta->{slug});
+	$self->data->search({issue_id => $i_id})->update({
+			issue_start => $self->_get_time_field_value(int($issue->{begin}/1000)),
+			issue_name => $issue->{slug},
+			last => \'NOW()'})
+		if defined($issue_delta->{slug}) or defined($issue_delta->{begin});
 
 	my $changed_stories = $issue_delta->{stories};
 	return
@@ -176,9 +158,10 @@ sub _add_story {
 	$self->data->find({issue_id => $i_id, story_id => 0, block_id => 0}, {key => 'path'})->update({last => \'NOW()'});
 	$self->data->update_or_create({
 		issue_id => $i_id,
-		issue_slug => $issue->{slug},
+		issue_name => $issue->{slug},
+		issue_start => $self->_get_time_field_value(int($issue->{begin}/1000)),
 		story_id => $s_id,
-		story_slug => $story->{slug},
+		story_name => $story->{slug},
 		block_id => 0,
 		last => \'NOW()'
 	});
@@ -211,7 +194,7 @@ sub _update_story_data {
 	return
 		unless $story->{active};
 
-	$self->data->search({issue_id => $i_id, story_id => $s_id})->update({story_slug => $story->{slug}, last => \'NOW()'})
+	$self->data->search({issue_id => $i_id, story_id => $s_id})->update({story_name => $story->{slug}, last => \'NOW()'})
 		if defined($story_delta->{slug});
 
 	my $changed_blocks = $story_delta->{blocks};
@@ -241,11 +224,12 @@ sub _add_block {
 	$self->data->find({issue_id => $i_id, story_id => $s_id, block_id => 0}, {key => 'path'})->update({last => \'NOW()'});
 	$self->data->update_or_create({
 		issue_id => $i_id,
-		issue_slug => $issue->{slug},
+		issue_name => $issue->{slug},
+		issue_start => $self->_get_time_field_value(int($issue->{begin}/1000)),
 		story_id => $s_id,
-		story_slug => $story->{slug},
+		story_name => $story->{slug},
 		block_id => $b_id,
-		block_slug => $block->{slug},
+		block_name => $block->{slug},
 		captions => $self->_get_captions($block->{text}),
 		last => \'NOW()'
 	});
@@ -308,7 +292,7 @@ sub _update_block_data {
 		unless $block->{active};
 
 	my $block_row = $self->data->search({issue_id => $i_id, story_id => $s_id, block_id => $b_id});
-	$block_row->update({block_slug => $block->{slug}, last => \'NOW()'})
+	$block_row->update({block_name => $block->{slug}, last => \'NOW()'})
 		if defined($block_delta->{slug});
 
 	$block_row->update({captions => $self->_get_captions($block->{text}), last => \'NOW()'})

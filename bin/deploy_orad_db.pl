@@ -6,30 +6,29 @@ use warnings;
 use FindBin;
 BEGIN { unshift @INC, "$FindBin::Bin/../lib" }
 
-use DB::CGSchema;
+use DB::OradCGSchema;
 use Getopt::Long;
 
-my ($preversion, $mode, $dbname, $dbhost, $dbuser, $dbpass, $dbtype) = ('', '', 'news_data', 'localhost', 'mmp', 'mmp', 'Pg');
+my ($preversion, $mode, $dbname, $dbhost, $dbuser, $dbpass) = ('', '', 'news_data', 'localhost', 'mmp', 'mmp');
 GetOptions(
 	'p|preversion:s'  => \$preversion,
 	'm|mode:s' => \$mode,
 	'b|db_name:s' => \$dbname,
 	'a|addr:s' => \$dbhost,
 	'u|user:s' => \$dbuser,
-	'p|pass:s' => \$dbpass,
-	't|type:s' => \$dbtype,
+	'p|pass:s' => \$dbpass
 ) or die "Can't get options from command line";
 
 die "Unknown mode '$mode'"
 	if($mode and $mode ne 'init' and $mode ne 'upgrade');
 
-my $schema = DB::CGSchema->connect("dbi:$dbtype:dbname=$dbname;host=$dbhost", $dbuser, $dbpass);
+my $schema = DB::OradCGSchema->connect("dbi:mysql:dbname=$dbname;host=$dbhost", $dbuser, $dbpass);
 
 if($mode eq 'init') {
 	print "Initializing...\n";
 	my $sql_dir = "$FindBin::Bin/../migrations/cg";
 	my $version = $schema->schema_version();
-	$schema->create_ddl_dir('PostgreSQL', $version, $sql_dir, $preversion);
+	$schema->create_ddl_dir('MySQL', $version, $sql_dir, $preversion);
 	print "done!\n";
 	exit 0;
 }
