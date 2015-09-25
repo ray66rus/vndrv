@@ -338,7 +338,7 @@ sub _add_caption {
 	$table->create(\%fields);
 
 	return
-		unless @{$template->{media_fields};
+		unless @{$template->{media_fields}};
 	for my $media_field (@{$template->{media_fields}}) {
 		$self->_deliver_media($caption->{fields}{$media_field});
 	}
@@ -397,12 +397,10 @@ sub _deliver_media {
 	my $hrv_filename = $decoded_res->{clip}{FILE_V};
 	(my $extension = $hrv_filename) =~ s/^.+\.(.+)$/$1/;
 	(my $prefix = $media_id) =~ s/^(...).+$/$1/;
-	my $name_with_ext = length($extension) ? "$media_id.$extension" : $value;
-	return {
-			val => $name_with_ext,
-			media_dir => $dam_cfg->{MediaDir},
-			url => "$dam_cfg->{DOWNLOAD_URL}/$prefix/$value/$hrv_filename"
-	};
+	my $name_with_ext = length($extension) ? "$media_id.$extension" : $media_id;
+	my $full_name = "$dam_cfg->{media_dir}/$name_with_ext";
+	my $url = "$dam_cfg->{download_url}/$prefix/$media_id/$hrv_filename";
+	system(qq|wget -c -N "$url" -O "$full_name" >/dev/null 2>&1 &|);
 }
 
 1;

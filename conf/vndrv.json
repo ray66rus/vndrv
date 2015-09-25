@@ -8,10 +8,11 @@
   "modules" : {
     "BarcoLNSPB" : {
       "dam" : {
-        "api_url" : "",
-        "download_url" : "",
-        "user" : "",
-        "passwd" : ""
+        "api_url" : "http://192.168.181.10/mmp/cgi-bin/search.fpl",
+        "download_url" : "http://192.168.181.10/mmp/hrvdb",
+        "user" : "api",
+        "password" : "api",
+        "media_dir" : "/home/ray/tmp"
       },
       "db" : {
         "addr" : "localhost",
