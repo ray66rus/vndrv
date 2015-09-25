@@ -1,1 +1,1 @@
-{"provides":{"Config::JSON":{"version":"1.5202","file":"lib/Config/JSON.pm"}},"dist":"Config-JSON-1.5202","pathname":"R/RI/RIZEN/Config-JSON-1.5202.tar.gz","version":"1.5202","name":"Config::JSON","target":"Config::JSON"}
+{"pathname":"R/RI/RIZEN/Config-JSON-1.5202.tar.gz","target":"Config::JSON","dist":"Config-JSON-1.5202","name":"Config::JSON","provides":{"Config::JSON":{"version":"1.5202","file":"lib/Config/JSON.pm"}},"version":"1.5202"}

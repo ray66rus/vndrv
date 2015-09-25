@@ -1,10 +1,13 @@
-package VNDRV::Connector::CG;
+package VNDRV::Connector::BarcoLNSPB;
 
 use Moose;
+
+use DB::BarcoLNSPBSchema;
 
 extends 'VNDRV::Connector';
 
 has 'db' => (is => 'ro', isa => 'Schema');
+has 'data' => (is => 'ro', isa => 'HashRef', default => sub { {} });
 
 sub BUILD {
 	my $self = shift;
@@ -15,13 +18,20 @@ sub BUILD {
 	my $pass = $db_config->{pass};
 	my $db_name = $db_config->{db_name} // 'news_data';
 
-	my $db_drv = $self->_db_drv_info;
+	$self->{db} = DB::BarcoLNSPBSchema->connect("dbi:mysql:dbname=$db_name;host=$addr", $user, $pass, { mysql_enable_utf8 => 1 });
 
-	$self->{db} = $db_drv->{schema}->connect("dbi:$db_drv->{name}:dbname=$db_name;host=$addr", $user, $pass, $db_drv->{options});
+	my $tables = $self->config->{tables};
+	for my $id (@$tables) {
+		my $data = $self->{db}->resultset($id);
+		$data->delete_all;
+		$self->data->{$id} = $data;
+	}
+}
 
-	$self->{data} = $self->{db}->resultset('Main');
-	$self->data->delete_all;
-	$self->data->create({issue_id => 0, story_id => 0, block_id => 0, last => \'NOW()'});
+sub _get_time_field_value {
+	my $self = shift;
+	my $time = shift;
+	return \"from_unixtime($time)";
 }
 
 sub _process_changes {
@@ -61,8 +71,10 @@ sub _remove_issue {
 	my $self = shift;
 	my $i_id = shift;
 
-	$self->data->search({issue_id => $i_id})->delete_all;
-	$self->data->find({issue_id => 0, story_id => 0, block_id => 0}, {key => 'path'})->update({last => \'NOW()'});
+	my $data = $self->data;
+	for my $id (keys %$data) {
+		$data->{$id}->search({issue_id => $i_id})->delete_all;
+	}
 }
 
 sub _is_issue_air_falg_added {
@@ -75,9 +87,6 @@ sub _add_issue {
 	my $i_id = shift;
 
 	my $issue = $self->get_issue({issue => $i_id});
-	my ($slug, $start_time) = ($issue->{slug}, int($issue->{begin}/1000));
-	$self->data->find({issue_id => 0, story_id => 0, block_id => 0}, {key => 'path'})->update({last => \'NOW()'});
-	$self->data->update_or_create({issue_id => $i_id, issue_start => $self->_get_time_field_value($start_time), issue_name => $slug, story_id => 0, block_id => 0, last => \'NOW()'});
 	for my $s_id (keys %{$issue->{stories}}) {
 		my $story = $issue->{stories}{$s_id};
 		next
@@ -92,7 +101,7 @@ sub _add_issue {
 
 sub _is_significant_issue_field_changed {
 	my $issue_data = shift;
-	return (defined($issue_data->{slug}) or defined($issue_data->{stories}) or defined($issue_data->{begin})) ? 1 : 0;
+	return defined($issue_data->{stories}) ? 1 : 0;
 }
 
 sub _update_issue_data {
@@ -103,12 +112,6 @@ sub _update_issue_data {
 	my $issue = $self->get_issue({issue => $i_id});
 	return
 		unless _is_air_issue($issue);
-
-	$self->data->search({issue_id => $i_id})->update({
-			issue_start => $self->_get_time_field_value(int($issue->{begin}/1000)),
-			issue_name => $issue->{slug},
-			last => \'NOW()'})
-		if defined($issue_delta->{slug}) or defined($issue_delta->{begin});
 
 	my $changed_stories = $issue_delta->{stories};
 	return
@@ -158,8 +161,10 @@ sub _remove_story {
 	my $self = shift;
 	my ($i_id, $s_id) = @_;
 
-	$self->data->search({issue_id => $i_id, story_id => $s_id})->delete_all;
-	$self->data->find({issue_id => $i_id, story_id => 0, block_id => 0}, {key => 'path'})->update({last => \'NOW()'});
+	my $data = $self->data;
+	for my $id (keys %$data) {
+		$data->{$id}->search({issue_id => $i_id, story_id => $s_id})->delete_all;
+	}
 }
 
 sub _is_story_active_flag_just_set {
@@ -175,16 +180,6 @@ sub _add_story {
 		($params->{issue_id}, $params->{story_id}, $params->{issue});
 
 	my $story = $issue->{stories}{$s_id};
-	$self->data->find({issue_id => $i_id, story_id => 0, block_id => 0}, {key => 'path'})->update({last => \'NOW()'});
-	$self->data->update_or_create({
-		issue_id => $i_id,
-		issue_name => $issue->{slug},
-		issue_start => $self->_get_time_field_value(int($issue->{begin}/1000)),
-		story_id => $s_id,
-		story_name => $story->{slug},
-		block_id => 0,
-		last => \'NOW()'
-	});
 	for my $b_id (keys %{$story->{blocks}}) {
 		my $block = $story->{blocks}{$b_id};
 		next
@@ -200,7 +195,7 @@ sub _add_story {
 
 sub _is_significant_story_field_changed {
 	my $story_data = shift;
-	return (defined($story_data->{slug}) or defined($story_data->{blocks})) ? 1 : 0;
+	return defined($story_data->{blocks}) ? 1 : 0;
 }
 
 sub _update_story_data {
@@ -213,9 +208,6 @@ sub _update_story_data {
 	my $story = $issue->{stories}{$s_id};
 	return
 		unless $story->{active};
-
-	$self->data->search({issue_id => $i_id, story_id => $s_id})->update({story_name => $story->{slug}, last => \'NOW()'})
-		if defined($story_delta->{slug});
 
 	my $changed_blocks = $story_delta->{blocks};
 	return
@@ -241,18 +233,11 @@ sub _add_block {
 
 	my $story = $issue->{stories}{$s_id};
 	my $block = $story->{blocks}{$b_id};
-	$self->data->find({issue_id => $i_id, story_id => $s_id, block_id => 0}, {key => 'path'})->update({last => \'NOW()'});
-	$self->data->update_or_create({
-		issue_id => $i_id,
-		issue_name => $issue->{slug},
-		issue_start => $self->_get_time_field_value(int($issue->{begin}/1000)),
-		story_id => $s_id,
-		story_name => $story->{slug},
-		block_id => $b_id,
-		block_name => $block->{slug},
-		captions => $self->_get_captions($block->{text}),
-		last => \'NOW()'
-	});
+	my @captions = $self->_get_captions($block->{text});
+	for my $caption (@captions) {
+		$params->{caption} = $caption;
+		$self->_add_caption($params);
+	}
 }
 
 sub _process_block_changes {
@@ -265,9 +250,7 @@ sub _process_block_changes {
 	eval {
 		if(!$block_delta or _is_block_active_flag_just_unset($block_delta)) {
 			$self->_remove_block($i_id, $s_id, $b_id);
-		} elsif(_is_block_active_flag_just_set($block_delta)) {
-			$self->_add_block($params);
-		} elsif(_is_significant_block_field_changed($block_delta)) {
+		} elsif(_is_block_active_flag_just_set($block_delta) or _is_significant_block_field_changed($block_delta)) {
 			$self->_update_block_data($params);
 		}
 	};
@@ -288,35 +271,101 @@ sub _is_block_active_flag_just_set {
 
 sub _is_significant_block_field_changed {
 	my $block_data = shift;
-	return (defined($block_data->{slug}) or defined($block_data->{text})) ? 1 : 0;
+	return defined($block_data->{text}) ? 1 : 0;
 }
 
 sub _remove_block {
 	my $self = shift;
 	my ($i_id, $s_id, $b_id) = @_;
 
-	$self->data->search({issue_id => $i_id, story_id => $s_id, block_id => $b_id})->delete_all;
-	$self->data->find({issue_id => $i_id, story_id => $s_id, block_id => 0}, {key => 'path'})->update({last => \'NOW()'});
+	my $data = $self->data;
+	for my $id (keys %$data) {
+		$data->{$id}->search({issue_id => $i_id, story_id => $s_id, block_id => $b_id})->delete_all;
+	}
 }
 
 sub _update_block_data {
 	my $self = shift;
 	my $params = shift;
 
-	my ($i_id, $s_id, $b_id, $block_delta, $issue) =
-		($params->{issue_id}, $params->{story_id}, $params->{block_id}, $params->{block_delta}, $params->{issue});
+	my ($i_id, $s_id, $b_id, $issue) =
+		($params->{issue_id}, $params->{story_id}, $params->{block_id}, $params->{issue});
 
 	my $story = $issue->{stories}{$s_id};
 	my $block = $story->{blocks}{$b_id};
 	return
 		unless $block->{active};
 
-	my $block_row = $self->data->search({issue_id => $i_id, story_id => $s_id, block_id => $b_id});
-	$block_row->update({block_name => $block->{slug}, last => \'NOW()'})
-		if defined($block_delta->{slug});
-
-	$block_row->update({captions => $self->_get_captions($block->{text}), last => \'NOW()'})
-		if (defined($block_delta->{text}) and $self->_are_captions_updated($block_delta));
+	my @captions = $self->_get_captions($block->{text});
+	$self->_remove_old_captions($params, \@captions);
+	for my $caption (@captions) {
+		$params->{caption} = $caption;
+		$self->_add_caption($params);
+	}
 }
 
+sub _add_caption {
+	my $self = shift;
+	my $params = shift;
+
+	my ($i_id, $s_id, $b_id, $issue, $caption) =
+		($params->{issue_id}, $params->{story_id}, $params->{block_id}, $params->{issue}, $params->{caption});
+
+	my $template = $self->config->{templates}{$caption->{type}};
+	return
+		unless defined($template);
+
+	my $table = $self->data->{$template->{table_id}};
+	my $caption_exists = $table->find({
+		issue_id => $i_id,
+		story_id => $s_id,
+		block_id => $b_id,
+		caption_id => $caption->{md5}}, {key => 'path'}
+	);
+	return
+		if $caption_exists;
+
+	my %fields = (
+		issue_id => $i_id,
+		story_id => $s_id,
+		block_id => $b_id,
+		caption_id => $caption->{md5}
+	);
+
+	for my $field_id (keys %{$caption->{fields}}) {
+		$fields{$template->{fields}{$field_id}} = $caption->{fields}{$field_id};
+	}
+	$table->create(\%fields);
+}
+
+sub _remove_old_captions {
+	my $self = shift;
+	my $params = shift;
+	my $captions = shift;
+
+	my ($i_id, $s_id, $b_id) =
+		($params->{issue_id}, $params->{story_id}, $params->{block_id});
+
+	for my $table_id (@{$self->config->{tables}}) {
+		my $table = $self->data->{$table_id};
+		my @current_captions = $table->search({issue_id => $i_id, story_id => $s_id, block_id => $b_id}, 
+			{columns => ['caption_id']}
+		);
+		for my $current_caption (@current_captions) {
+			my $caption_id = $current_caption->caption_id;
+			next
+				if(grep {$_->{md5} eq $caption_id} @$captions);
+			$table->search({
+				issue_id => $i_id, story_id => $s_id, block_id => $b_id, caption_id => $caption_id
+				})->delete_all;
+		}
+	}
+}
+
+override '_get_captions' => sub {
+	my $self = shift;
+	return map { $_->{md5} = $self->_get_caption_md5($_); $_ } super();
+};
+
 1;
+

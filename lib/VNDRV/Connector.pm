@@ -6,7 +6,9 @@ use threads;
 use JSON::XS;
 use LWP::UserAgent;
 use HTTP::Cookies;
-use Data::Dumper;
+
+use Digest::MD5 'md5_hex';
+use Encode 'encode_utf8';
 
 use utf8;
 
@@ -178,7 +180,7 @@ sub _get_captions {
 		push @captions, $caption
 			if $caption;
 	}
-	return $self->json->encode(\@captions);
+	return wantarray ? @captions : $self->json->encode(\@captions);
 }
 
 sub _vn_text_unescape {
@@ -188,6 +190,16 @@ sub _vn_text_unescape {
 	$str =~ s/\\\\/\\/g;
 
 	return $str;
+}
+
+sub _get_caption_md5 {
+	my $self = shift;
+	my $caption = shift;
+	my $str = "$caption->{type}\n";
+	for my $field_id (sort { "$a\n$caption->{fields}{$a}" cmp "$b\n$caption->{fields}{$b}" } keys %{$caption->{fields}}) {
+		$str .= "$field_id\n$caption->{fields}{$field_id}\n";
+	}
+	return md5_hex(encode_utf8($str));
 }
 
 sub _vn_parse_string_nocontext {

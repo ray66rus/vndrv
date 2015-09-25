@@ -1,1 +1,1 @@
-{"target":"local::lib","name":"local::lib","version":"2.000015","pathname":"H/HA/HAARG/local-lib-2.000015.tar.gz","dist":"local-lib-2.000015","provides":{"local::lib":{"version":"2.000015","file":"lib/local/lib.pm"},"lib::core::only":{"file":"lib/lib/core/only.pm"}}}
+{"pathname":"H/HA/HAARG/local-lib-2.000015.tar.gz","target":"local::lib","provides":{"lib::core::only":{"file":"lib/lib/core/only.pm"},"local::lib":{"version":"2.000015","file":"lib/local/lib.pm"}},"version":"2.000015","dist":"local-lib-2.000015","name":"local::lib"}

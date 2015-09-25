@@ -34,8 +34,7 @@
       "configure" : {
          "requires" : {
             "ExtUtils::CBuilder" : "0.26",
-            "ExtUtils::MakeMaker" : "0",
-            "perl" : "5.008001"
+            "ExtUtils::MakeMaker" : "0"
          }
       },
       "develop" : {

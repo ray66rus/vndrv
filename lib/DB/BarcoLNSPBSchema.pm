@@ -1,4 +1,4 @@
-package DB::OradCGSchema;
+package DB::BarcoLNSPBSchema;
 
 # based on the DBIx::Class Schema base class
 use base qw/DBIx::Class::Schema/;

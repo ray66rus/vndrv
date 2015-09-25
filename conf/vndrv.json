@@ -1,17 +1,60 @@
 {
   "news" : {
-    "host" : "192.168.181.11"
+    "host" : "localhost"
   },
   "log" : {
     "level" : "debug"
   },
   "modules" : {
-    "CG::Caspar" : {
+    "BarcoLNSPB" : {
       "db" : {
         "addr" : "localhost",
-        "user" : "mmp",
-        "pass" : "mmp",
-        "db_name" : "news_data",
+        "user" : "root",
+        "pass" : "root",
+        "db_name" : "test",
+      },
+      "tables" : ["News", "Compare" ],
+      "templates" : {
+        "БАРКО - Новость" : {
+          "table_id" : "News",
+          "fields" : {
+            "Заголовок" : "title",
+            "Текст" : "title2",
+            "Фото" : "foto"
+          }
+        },
+        "БАРКО - 5 Новостей" : {
+          "table_id" : "News",
+          "fields" : {
+            "Текст 1" : "news1",
+            "Текст 2" : "news2",
+            "Текст 3" : "news3",
+            "Текст 4" : "news4",
+            "Текст 5" : "news5",
+            "Фото" : "foto"
+          }
+        },
+        "БАРКО - Сравнение" : {
+          "table_id" : "Compare",
+          "fields" : {
+            "Заголовок" : "title",
+            "Имя 1" : "name1",
+            "Текст 1" : "text1",
+            "Фото 1" : "foto2",
+            "Имя 2" : "name2",
+            "Текст 2" : "text2",
+            "Фото 2" : "foto1",
+            "Имя 3" : "name3",
+            "Текст 3" : "text3",
+            "Фото 3" : "foto3",
+            "Имя 4" : "name4",
+            "Текст 4" : "text4",
+            "Фото 4" : "foto4",
+            "Имя 5" : "name5",
+            "Текст 5" : "text5",
+            "Фото 5" : "foto5",
+          }
+        },
       }
     }
   }
