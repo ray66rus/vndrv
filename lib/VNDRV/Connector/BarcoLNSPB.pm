@@ -336,6 +336,12 @@ sub _add_caption {
 		$fields{$template->{fields}{$field_id}} = $caption->{fields}{$field_id};
 	}
 	$table->create(\%fields);
+
+	return
+		unless @{$template->{media_fields};
+	for my $media_field (@{$template->{media_fields}}) {
+		$self->_deliver_media($caption->{fields}{$media_field});
+	}
 }
 
 sub _remove_old_captions {
@@ -367,5 +373,36 @@ override '_get_captions' => sub {
 	return map { $_->{md5} = $self->_get_caption_md5($_); $_ } super();
 };
 
-1;
+sub _deliver_media {
+	my $self = shift;
+	my $media_id = shift;
 
+	my $dam_cfg = $self->config->{dam};
+	my $req_result = $self->{ua}->get("$dam_cfg->{api_url}?query=read_clip_info&user=$dam_cfg->{user}&passwd=$dam_cfg->{password}&clip=$media_id");
+	if(!$req_result->is_success) {
+		$self->log->error("NUM0023E Can't call api: " . $req_result->status_line);
+		return;
+	}
+	my $res = $req_result->decoded_content;
+	if($res =~ /^ERROR\s+/) {
+		$self->log->error("NUM0024E API call returned error: $res");
+		return;
+	}
+	my $decoded_res;
+	eval { $decoded_res = $self->json->decode($res) };
+	if($@) {
+		$self->log->error("NUM0025E API call returned invalid data: $res");
+		return;
+	}
+	my $hrv_filename = $decoded_res->{clip}{FILE_V};
+	(my $extension = $hrv_filename) =~ s/^.+\.(.+)$/$1/;
+	(my $prefix = $media_id) =~ s/^(...).+$/$1/;
+	my $name_with_ext = length($extension) ? "$media_id.$extension" : $value;
+	return {
+			val => $name_with_ext,
+			media_dir => $dam_cfg->{MediaDir},
+			url => "$dam_cfg->{DOWNLOAD_URL}/$prefix/$value/$hrv_filename"
+	};
+}
+
+1;

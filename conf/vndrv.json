@@ -7,6 +7,12 @@
   },
   "modules" : {
     "BarcoLNSPB" : {
+      "dam" : {
+        "api_url" : "",
+        "download_url" : "",
+        "user" : "",
+        "passwd" : ""
+      },
       "db" : {
         "addr" : "localhost",
         "user" : "root",
@@ -21,7 +27,8 @@
             "Заголовок" : "title",
             "Текст" : "title2",
             "Фото" : "foto"
-          }
+          },
+          "media_fields" : ["Фото"]
         },
         "БАРКО - 5 Новостей" : {
           "table_id" : "News",
@@ -32,7 +39,8 @@
             "Текст 4" : "news4",
             "Текст 5" : "news5",
             "Фото" : "foto"
-          }
+          },
+          "media_fields" : ["Фото"]
         },
         "БАРКО - Сравнение" : {
           "table_id" : "Compare",
@@ -53,7 +61,8 @@
             "Имя 5" : "name5",
             "Текст 5" : "text5",
             "Фото 5" : "foto5",
-          }
+          },
+          "media_fields" : ["Фото 1", "Фото 2", "Фото 3", "Фото 4", "Фото 5"]
         },
       }
     }
