@@ -400,9 +400,10 @@ sub _deliver_media {
 	(my $extension = $hrv_filename) =~ s/^.+\.(.+)$/$1/;
 	(my $prefix = $media_id) =~ s/^(...).+$/$1/;
 	my $name_with_ext = length($extension) ? "$media_id.$extension" : $media_id;
-	my $full_name = "$dam_cfg->{media_dir}/$name_with_ext";
+	my $full_name = "$media_dir/$name_with_ext";
 	my $url = "$dam_cfg->{download_url}/$prefix/$media_id/$hrv_filename";
 	system(qq|wget -c -N "$url" -O "$full_name" >/dev/null 2>&1 &|);
+	return $name_with_ext;
 }
 
 1;
