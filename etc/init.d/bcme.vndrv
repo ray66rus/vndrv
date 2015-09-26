@@ -1,0 +1,93 @@
+#!/bin/sh
+#
+#
+# bcme.vndrv     This is the init script for starting up the Brodacast.me News universal extension driver
+#
+# chkconfig: - 64 36
+# description: Extenstions Driver for the Broadcast.me Production newsroom automation server
+# processname: bcme.vndrv
+
+### BEGIN INIT INFO
+# Provides:       bcme.vndrv
+# Required-Start: $network $local_fs $syslog bcme.news
+# Required-Stop:  bcme.vndrv
+# Default-Start:
+# Default-Stop: 0 1 2 3 4 5 6
+### END INIT INFO
+
+home=/usr/local/bcme.vndrv
+uid=news
+PRODUCT="Broadcast.me News Universal News Driver"
+bindir=${home}/bin
+retval=0
+SERVER_NAME=vndrv
+exec=${bindir}/${SERVER_NAME}
+
+# Source function library.
+. /etc/rc.d/init.d/functions
+
+check() {
+	# Check that we're a privileged user
+	[ `id -u` = 0 ] || exit 4
+
+	# Check if starter is executable
+	[ -x $exec ] || exit 5
+}
+
+start_daemon() {
+	check
+	echo -n "Starting $PRODUCT: "
+	if ! status $exec > /dev/null; then
+		su -c "${exec} >/dev/null 2>&1 &" - $uid
+		retval=$?
+	else
+		retval=1
+	fi
+	if [ $retval == 0 ]; then
+		success
+	else
+		failure
+	fi
+	echo
+	touch /var/lock/subsys/${SERVER_NAME}
+	return $retval
+}
+
+stop_daemon() {
+	check
+	echo -n "Shutting down $PRODUCT: "
+	killproc $exec
+	retval=$?
+	echo
+	rm -f /var/lock/subsys/${SERVER_NAME}
+	return $retval
+}
+
+restart_daemon() {
+	stop_daemon
+	sleep 10
+	start_daemon
+}
+
+status_daemon() {
+	status $exec
+}
+
+case "$1" in
+    start)
+	start_daemon
+	;;
+    stop)
+	stop_daemon
+	;;
+    restart)
+	restart_daemon
+	;;
+    status)
+	status_daemon
+	;;
+    *)
+	echo "Usage: $0 {start|stop|restart|status}"
+	exit 1
+	;;
+esac
