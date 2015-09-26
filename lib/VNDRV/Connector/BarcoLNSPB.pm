@@ -339,7 +339,7 @@ sub _add_caption {
 		for my $field_id (@{$template->{media_fields}}) {
 			my $media_id = $caption->{fields}{$field_id};
 			my $file_name_with_ext = $self->_deliver_media($media_id, $media_dir);
-			$fields{$field_id} = $file_name_with_ext;
+			$fields{$template->{fields}{$field_id}} = $file_name_with_ext;
 		}
 	}
 	$table->create(\%fields);
