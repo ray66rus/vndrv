@@ -331,17 +331,18 @@ sub _add_caption {
 		block_id => $b_id,
 		caption_id => $caption->{md5}
 	);
-
 	for my $field_id (keys %{$caption->{fields}}) {
 		$fields{$template->{fields}{$field_id}} = $caption->{fields}{$field_id};
 	}
-	$table->create(\%fields);
-
-	return
-		unless @{$template->{media_fields}};
-	for my $media_field (@{$template->{media_fields}}) {
-		$self->_deliver_media($caption->{fields}{$media_field});
+	if(@{$template->{media_fields}}) {
+		my $media_dir = $template->{media_dir} // $self->config->{dam}{media_dir};
+		for my $field_id (@{$template->{media_fields}}) {
+			my $media_id = $caption->{fields}{$field_id};
+			my $file_name_with_ext = $self->_deliver_media($media_id, $media_dir);
+			$fields{$field_id} = $file_name_with_ext;
+		}
 	}
+	$table->create(\%fields);
 }
 
 sub _remove_old_captions {
@@ -376,6 +377,7 @@ override '_get_captions' => sub {
 sub _deliver_media {
 	my $self = shift;
 	my $media_id = shift;
+	my $media_dir = shift;
 
 	my $dam_cfg = $self->config->{dam};
 	my $req_result = $self->{ua}->get("$dam_cfg->{api_url}?query=read_clip_info&user=$dam_cfg->{user}&passwd=$dam_cfg->{password}&clip=$media_id");
