@@ -1,6 +1,7 @@
 package VNDRV::Connector::BarcoLNSPB;
 
 use Moose;
+use Data::Dumper;
 
 use DB::BarcoLNSPBSchema;
 
@@ -148,7 +149,7 @@ sub _process_story_changes {
 			$self->_update_story_data($params);
 		}
 	};
-	$self->log->error("NUM0021E Error while updating story $s_id: $@")
+	$self->log->error("NUD0021E Error while updating story $s_id: $@")
 		if $@;
 }
 
@@ -254,7 +255,7 @@ sub _process_block_changes {
 			$self->_update_block_data($params);
 		}
 	};
-	$self->log->error("NUM0022E Error while updating block $b_id: $@")
+	$self->log->error("NUD0022E Error while updating block $b_id: $@")
 		if $@;
 }
 
@@ -334,7 +335,7 @@ sub _add_caption {
 	for my $field_id (keys %{$caption->{fields}}) {
 		$fields{$template->{fields}{$field_id}} = $caption->{fields}{$field_id};
 	}
-	if(@{$template->{media_fields}}) {
+	if($template->{media_fields}) {
 		my $media_dir = $template->{media_dir} // $self->config->{dam}{media_dir};
 		for my $field_id (@{$template->{media_fields}}) {
 			my $media_id = $caption->{fields}{$field_id};
@@ -342,6 +343,7 @@ sub _add_caption {
 			$fields{$template->{fields}{$field_id}} = $file_name_with_ext;
 		}
 	}
+	$self->log->debug("NUD0026M " . Data::Dumper->Dump([\%fields]));
 	$table->create(\%fields);
 }
 
@@ -382,18 +384,18 @@ sub _deliver_media {
 	my $dam_cfg = $self->config->{dam};
 	my $req_result = $self->{ua}->get("$dam_cfg->{api_url}?query=read_clip_info&user=$dam_cfg->{user}&passwd=$dam_cfg->{password}&clip=$media_id");
 	if(!$req_result->is_success) {
-		$self->log->error("NUM0023E Can't call api: " . $req_result->status_line);
+		$self->log->error("NUD0023E Can't call api: " . $req_result->status_line);
 		return;
 	}
 	my $res = $req_result->decoded_content;
 	if($res =~ /^ERROR\s+/) {
-		$self->log->error("NUM0024E API call returned error: $res");
+		$self->log->error("NUD0024E API call returned error: $res");
 		return;
 	}
 	my $decoded_res;
 	eval { $decoded_res = $self->json->decode($res) };
 	if($@) {
-		$self->log->error("NUM0025E API call returned invalid data: $res");
+		$self->log->error("NUD0025E API call returned invalid data: $res");
 		return;
 	}
 	my $hrv_filename = $decoded_res->{clip}{FILE_V};

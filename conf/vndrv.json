@@ -1,6 +1,6 @@
 {
   "news" : {
-    "host" : "localhost"
+    "host" : "192.168.181.11"
   },
   "log" : {
     "level" : "debug"
@@ -12,15 +12,15 @@
         "download_url" : "http://192.168.181.10/mmp/hrvdb",
         "user" : "api",
         "password" : "api",
-        "media_dir" : "/home/ray/tmp"
+        "media_dir" : "/orad_share/Projects/BARCO/GRPH/NEWS_PHOTOS"
       },
       "db" : {
-        "addr" : "localhost",
+        "addr" : "192.168.186.166",
         "user" : "root",
         "pass" : "root",
-        "db_name" : "test",
+        "db_name" : "barco",
       },
-      "tables" : ["News", "Compare" ],
+      "tables" : ["News", "Compare", "EconomicsCols", "EconomicsRows", "Sports" ],
       "templates" : {
         "БАРКО - Новость" : {
           "table_id" : "News",
@@ -43,7 +43,21 @@
           },
           "media_fields" : ["Фото"]
         },
-        "БАРКО - Сравнение" : {
+        "БАРКО - Сравнение 2" : {
+          "table_id" : "Compare",
+          "fields" : {
+            "Заголовок" : "title",
+            "Имя 1" : "name1",
+            "Текст 1" : "text1",
+            "Фото 1" : "foto2",
+            "Имя 2" : "name2",
+            "Текст 2" : "text2",
+            "Фото 2" : "foto1"
+          },
+          "media_fields" : ["Фото 1", "Фото 2"],
+          "media_dir" : "/orad_share/Projects/BARCO/GRPH/COMPARE_FOTOS"
+        },
+        "БАРКО - Сравнение 5" : {
           "table_id" : "Compare",
           "fields" : {
             "Заголовок" : "title",
@@ -63,8 +77,84 @@
             "Текст 5" : "text5",
             "Фото 5" : "foto5",
           },
-          "media_fields" : ["Фото 1", "Фото 2", "Фото 3", "Фото 4", "Фото 5"]
+          "media_fields" : ["Фото 1", "Фото 2", "Фото 3", "Фото 4", "Фото 5"],
+          "media_dir" : "/orad_share/Projects/BARCO/GRPH/COMPARE_FOTOS"
         },
+        "БАРКО - Экономика - Столбцы" : {
+          "table_id" : "EconomicsCols",
+          "fields" : {
+            "Заголовок" : "header",
+            "Столбец 1" : "bar1",
+            "Число 1" : "num1",
+            "Текст 1" : "text1",
+            "Столбец 2" : "bar2",
+            "Число 2" : "num2",
+            "Текст 2" : "text2",
+            "Столбец 3" : "bar3",
+            "Число 3" : "num3",
+            "Текст 3" : "text3",
+            "Столбец 4" : "bar4",
+            "Число 4" : "num4",
+            "Текст 4" : "text4",
+            "Столбец 5" : "bar5",
+            "Число 5" : "num5",
+            "Текст 5" : "text5",
+            "Столбец 6" : "bar6",
+            "Число 6" : "num6",
+            "Текст 6" : "text6"
+          }
+        },
+        "БАРКО - Экономика - Строки" : {
+          "table_id" : "EconomicsRows",
+          "fields" : {
+            "Заголовок" : "header",
+            "Строка 1" : "bar1",
+            "Число 1" : "num1",
+            "Текст 1" : "text1",
+            "Строка 2" : "bar2",
+            "Число 2" : "num2",
+            "Текст 2" : "text2",
+            "Строка 3" : "bar3",
+            "Число 3" : "num3",
+            "Текст 3" : "text3",
+            "Строка 4" : "bar4",
+            "Число 4" : "num4",
+            "Текст 4" : "text4",
+            "Строка 5" : "bar5",
+            "Число 5" : "num5",
+            "Текст 5" : "text5",
+            "Строка 6" : "bar6",
+            "Число 6" : "num6",
+            "Текст 6" : "text6",
+            "Строка 7" : "bar7",
+            "Число 7" : "num7",
+            "Текст 7" : "text7"
+          }
+        },
+        "БАРКО - Сравнение команд" : {
+          "table_id" : "Sports",
+          "fields" : {
+            "Заголовок" : "header",
+            "Фото слева" : "foto1",
+            "Фото справа" : "foto2",
+            "Счет слева" : "score_l",
+            "Счет справа" : "score_r",
+            "Имя слева 1" : "l_01",
+            "Имя слева 2" : "l_02",
+            "Имя слева 3" : "l_03",
+            "Имя справа 1" : "r_01",
+            "Имя справа 2" : "r_02",
+            "Имя справа 3" : "r_03",
+            "Счет слева 1" : "num_l_01",
+            "Счет слева 2" : "num_l_02",
+            "Счет слева 3" : "num_l_03",
+            "Счет справа 1" : "num_r_01",
+            "Счет справа 2" : "num_r_02",
+            "Счет справа 3" : "num_r_03"
+           },
+           "media_fields" : ["Фото слева", "Фото справа"],
+           "media_dir" : "/orad_share/Projects/BARCO/GRPH/SPORT_LOGOS"
+        }
       }
     }
   }

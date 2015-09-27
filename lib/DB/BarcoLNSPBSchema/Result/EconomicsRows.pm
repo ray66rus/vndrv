@@ -32,7 +32,7 @@ my %columns = (
 		is_nullable => 1,
 	},
 );
-for(my $i=1;$i<=6;$i++) {
+for(my $i=1;$i<=7;$i++) {
 	$columns{"text$i"} = { data_type => 'text', is_nullable => 1 };
 	$columns{"num$i"} = { data_type => 'integer', is_nullable => 1 };
 	$columns{"bar$i"} = { data_type => 'text', is_nullable => 1 };
