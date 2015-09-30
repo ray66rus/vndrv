@@ -344,7 +344,9 @@ sub _add_caption {
 		}
 	}
 	$self->log->debug("NUD0026M " . Data::Dumper->Dump([\%fields]));
-	$table->create(\%fields);
+	eval { $table->create(\%fields) };
+	$self->log->warning("NUD0027W Can't create caption: $@")
+		if $@;
 }
 
 sub _remove_old_captions {
