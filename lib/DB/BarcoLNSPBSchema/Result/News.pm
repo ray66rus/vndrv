@@ -27,10 +27,6 @@ my %columns = (
 	caption_id => {
 		data_type => 'varchar(32)',
 	},
-	foto => {
-		data_type => 'text',
-		is_nullable => 1,
-	},
 	title => {
 		data_type => 'text',
 		is_nullable => 1,
@@ -41,7 +37,8 @@ my %columns = (
 	}
 );
 for(my $i=1;$i<=5;$i++) {
-	$columns{"news$i"} = { data_type => 'text', is_nullable => 1 }
+	$columns{"news$i"} = { data_type => 'text', is_nullable => 1 };
+	$columns{"foto$i"} = { data_type => 'text', is_nullable => 1 };
 }
 
 __PACKAGE__->add_columns(%columns);

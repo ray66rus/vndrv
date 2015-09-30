@@ -20,7 +20,7 @@
         "pass" : "root",
         "db_name" : "barco",
       },
-      "tables" : ["News", "Compare", "EconomicsCols", "EconomicsRows", "Sports" ],
+      "tables" : ["News", "Compare", "EconomicsCols", "EconomicsRows", "Sports", "Slides" ],
       "templates" : {
         "БАРКО - Новость" : {
           "table_id" : "News",
@@ -39,9 +39,13 @@
             "Текст 3" : "news3",
             "Текст 4" : "news4",
             "Текст 5" : "news5",
-            "Фото" : "foto"
+            "Фото 1" : "foto1",
+            "Фото 2" : "foto2",
+            "Фото 3" : "foto3",
+            "Фото 4" : "foto4",
+            "Фото 5" : "foto5"
           },
-          "media_fields" : ["Фото"]
+          "media_fields" : ["Фото 1","Фото 2","Фото 3", "Фото 4", "Фото 5"]
         },
         "БАРКО - Сравнение 2" : {
           "table_id" : "Compare",
@@ -84,22 +88,16 @@
           "table_id" : "EconomicsCols",
           "fields" : {
             "Заголовок" : "header",
-            "Столбец 1" : "bar1",
             "Число 1" : "num1",
             "Текст 1" : "text1",
-            "Столбец 2" : "bar2",
             "Число 2" : "num2",
             "Текст 2" : "text2",
-            "Столбец 3" : "bar3",
             "Число 3" : "num3",
             "Текст 3" : "text3",
-            "Столбец 4" : "bar4",
             "Число 4" : "num4",
             "Текст 4" : "text4",
-            "Столбец 5" : "bar5",
             "Число 5" : "num5",
             "Текст 5" : "text5",
-            "Столбец 6" : "bar6",
             "Число 6" : "num6",
             "Текст 6" : "text6"
           }
@@ -108,25 +106,18 @@
           "table_id" : "EconomicsRows",
           "fields" : {
             "Заголовок" : "header",
-            "Строка 1" : "bar1",
             "Число 1" : "num1",
             "Текст 1" : "text1",
-            "Строка 2" : "bar2",
             "Число 2" : "num2",
             "Текст 2" : "text2",
-            "Строка 3" : "bar3",
             "Число 3" : "num3",
             "Текст 3" : "text3",
-            "Строка 4" : "bar4",
             "Число 4" : "num4",
             "Текст 4" : "text4",
-            "Строка 5" : "bar5",
             "Число 5" : "num5",
             "Текст 5" : "text5",
-            "Строка 6" : "bar6",
             "Число 6" : "num6",
             "Текст 6" : "text6",
-            "Строка 7" : "bar7",
             "Число 7" : "num7",
             "Текст 7" : "text7"
           }
@@ -154,6 +145,18 @@
            },
            "media_fields" : ["Фото слева", "Фото справа"],
            "media_dir" : "/orad_share/Projects/BARCO/GRPH/SPORT_LOGOS"
+        },
+        "БАРКО - Слайды" : {
+          "table_id" : "Slides",
+          "fields" : {
+            "Клип 1" : "clip1",
+            "Клип 2" : "clip2",
+            "Клип 3" : "clip3",
+            "Клип 4" : "clip4",
+            "Клип 5" : "clip5"
+           },
+           "media_fields" : ["Клип 1", "Клип 2", "Клип 3", "Клип 4", "Клип 5"],
+           "media_dir" : "/orad_share/Clips/Barco"
         }
       }
     }
