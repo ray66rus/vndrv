@@ -20,7 +20,7 @@
         "pass" : "root",
         "db_name" : "barco",
       },
-      "tables" : ["News", "Compare", "EconomicsCols", "EconomicsRows", "Sports", "Slides" ],
+      "tables" : ["News", "Compare", "EconomicsCols", "EconomicsRows", "Sports", "Slides", "Afisha"],
       "templates" : {
         "БАРКО - Новость" : {
           "table_id" : "News",
@@ -157,6 +157,23 @@
            },
            "media_fields" : ["Клип 1", "Клип 2", "Клип 3", "Клип 4", "Клип 5"],
            "media_dir" : "/orad_share/Clips/Barco"
+        },
+        "БАРКО - Афиша" : {
+          "table_id" : "Afisha",
+          "fields" : {
+            "Заголовок" : "header",
+            "Подзаголовок 1" : "subheader1",
+            "Подзаголовок 2" : "subheader2",
+            "Подзаголовок 3" : "subheader3",
+            "Место 1" : "place1",
+            "Место 2" : "place2",
+            "Дата" : "day",
+            "Время" : "time",
+            "Фото 1" : "foto1",
+            "Фото 2" : "foto2",
+            "Фото 3" : "foto3",
+            "Цвет" : "color"
+          }
         }
       }
     }
