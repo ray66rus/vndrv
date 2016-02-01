@@ -5,7 +5,7 @@ use base qw/DBIx::Class::Schema/;
 
 use FindBin;
 
-our $VERSION = 1.1;
+our $VERSION = 1.2;
 
 __PACKAGE__->load_namespaces();
 __PACKAGE__->load_components(qw/Schema::Versioned/);

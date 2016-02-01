@@ -35,7 +35,7 @@ my %columns = (
 		data_type => 'text',
 		is_nullable => 1,
 	},
-	time => {
+	event_time => {
 		data_type => 'text',
 		is_nullable => 1,
 	},
