@@ -22,3 +22,4 @@ log
 lib/auto
 Client.c
 local
+conf/vndrv.json

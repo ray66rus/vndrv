@@ -237,7 +237,7 @@ sub _vn_parse_string_nocontext {
 
 sub _make_caption_from_string {
 	my $text = shift;
-
+	
 	$text =~ s/^\s*(?:(\d+\:\d+)|(\d+))?.*?\n//s;
 	return undef
 		unless($text =~ s/^\s*$CAP_TYPE_PATTERN\:[ \t]+(.*?)\s*$//m);
@@ -245,7 +245,8 @@ sub _make_caption_from_string {
 	my %caption = (type => $1);
 
 	$text =~ s/^\s*ID:[ \t]*(.*?)\s*$//m;
-
+	$caption{id} = $1;
+	
 	my @fields = ();
 	my $current_field_id = '';
 	$caption{fields} = {};
